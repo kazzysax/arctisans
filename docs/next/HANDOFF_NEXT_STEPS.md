@@ -186,3 +186,18 @@ cheaper checks yourself before mainnet:
   commit real values.
 - Chain id 5042, Arc; USDC is also the gas token (~1¢/tx); Circle sponsors
   gas via Gas Station so end users pay nothing.
+
+
+---
+## Update (Oct 2, later) — money flow wired
+
+Done since the sections above:
+- `lib/circle.ts` + `lib/walletClient.ts`: Circle sign-in and transaction approval helpers (server + browser).
+- Hire screen sends a real agreement (`POST /api/jobs`, then the wallet approves the propose call).
+- Invoice `/jobs/[id]` reads real job data (`GET /api/jobs/[id]` now returns parties, released, split offer, settlement deadline, timeline) and runs accept / fund / start / update / deliver / approve / revise / split / accept split / review.
+- Tip sheet posts to `/api/tip` and approves the call.
+- Lint is clean of errors (6 warnings remain).
+
+**Verified:** tsc, eslint (0 errors), 49 tests, `next build`, and the invoice rendered in Chrome from a seeded database as client and artisan (right actions per role and state).
+**NOT verified:** anything that needs a live Circle key. Sign-in, wallet creation, signing and the transaction-hash lookup have never run against Circle. First job when keys exist: run one full job on testnet and fix whatever Circle returns that the code did not expect.
+**Still on demo data:** feed cards, stories, post and request pages, agents console, welcome.

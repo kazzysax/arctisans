@@ -2,14 +2,30 @@
 import { useState } from "react";
 import { Sheet } from "./ui";
 import { CoinDrop } from "./fun/CoinDrop";
+import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 
 const PRESETS = [1, 2, 5];
-export function TipSheet({ open, onClose, name, avatar }: { open: boolean; onClose: () => void; name: string; avatar: string }) {
+export function TipSheet({ open, onClose, name, avatar, to, postId }: { open: boolean; onClose: () => void; name: string; avatar: string; to?: string; postId?: string }) {
   const [amt, setAmt] = useState<number | null>(2);
   const [custom, setCustom] = useState("");
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const value = custom ? Number(custom) : amt ?? 0;
   const ok = value >= 0.5 && value <= 100;
+  async function send() {
+    setErr(null);
+    if (!to || !circleReady()) { setDone(true); return; } // demo path: no wallet to charge
+    setBusy(true);
+    try {
+      const res = await fetch("/api/tip", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to, amount: Math.round(value * 1e6), ...(postId ? { postId } : {}) }) });
+      const j = await res.json();
+      if (res.status === 401) { setErr("Please sign in to send a tip."); return; }
+      if (!res.ok) throw new Error(j.error ?? "Could not send the tip");
+      await sendCalls(j.calls as Call[]);
+      setDone(true);
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
   const close = () => { onClose(); setTimeout(() => setDone(false), 300); };
   return (
     <Sheet open={open} onClose={close}>
@@ -37,7 +53,8 @@ export function TipSheet({ open, onClose, name, avatar }: { open: boolean; onClo
             <input inputMode="decimal" placeholder="Other amount" value={custom} onChange={(e) => setCustom(e.target.value.replace(/[^\d.]/g, ""))} className="field num pl-8" />
           </div>
           <p className="mt-2 text-[12px] text-faint">Minimum $0.50. No fee.</p>
-          <button disabled={!ok} onClick={() => setDone(true)} className="btn btn-solid mt-6 w-full">Send ${ok ? value.toFixed(2) : "0.00"}</button>
+          {err && <p className="mt-3 text-[13px] text-fg">{err}</p>}
+          <button disabled={!ok || busy} onClick={send} className="btn btn-solid mt-6 w-full">{busy ? "Waiting for approval…" : `Send $${ok ? value.toFixed(2) : "0.00"}`}</button>
         </>
       )}
     </Sheet>

@@ -76,7 +76,9 @@ export default function Search() {
       .finally(() => setLoadingR(false));
   }, [dq, cat]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: state is set when the request resolves
   useEffect(() => { fetchPeople(); }, [fetchPeople]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: state is set when the request resolves
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
   const loading = view === "People" ? loadingP : loadingR;

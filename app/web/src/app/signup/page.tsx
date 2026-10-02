@@ -1,7 +1,8 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mark } from "@/components/Logo";
+import { circleReady, signInWithEmail, finishLogin } from "@/lib/walletClient";
 
 // Sign-up: full-bleed dewy macro photo tinted light blue, a solid square block with spaced serif capitals (reference),
 // and the email / Google sign-in under it.
@@ -11,117 +12,36 @@ import { Mark } from "@/components/Logo";
 //  3. We POST userToken to /api/auth/circle → server verifies, sets session cookie
 //  4. If profile exists → /social; if not → /setup
 
-const CIRCLE_APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID ?? "";
-
-async function sendEmailOtp(email: string): Promise<void> {
-  const r = await fetch("https://api.circle.com/v1/w3s/users/email/otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ appId: CIRCLE_APP_ID, email }),
-  });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error((e as { message?: string }).message ?? "Could not send code");
-  }
-}
-
-async function verifyEmailOtp(email: string, otp: string): Promise<string> {
-  const r = await fetch("https://api.circle.com/v1/w3s/users/email/otp/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ appId: CIRCLE_APP_ID, email, otp }),
-  });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error((e as { message?: string }).message ?? "Invalid code");
-  }
-  const j = (await r.json()) as { data?: { userToken?: string } };
-  const userToken = j.data?.userToken;
-  if (!userToken) throw new Error("No token returned");
-  return userToken;
-}
-
-async function finishSignIn(userToken: string): Promise<{ hasProfile: boolean }> {
-  const r = await fetch("/api/auth/circle", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userToken }),
-  });
-  if (r.status === 409) {
-    // wallet exists but no profile yet
-    return { hasProfile: false };
-  }
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error((e as { error?: string }).error ?? "Sign-in failed");
-  }
-  // Check if profile already exists
-  const profileRes = await fetch("/api/profile", { credentials: "include" });
-  return { hasProfile: profileRes.ok };
-}
-
 export default function SignUp() {
   const r = useRouter();
   const [step, setStep] = useState<"start" | "code">("start");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  // If Circle SDK is not configured, fall through to demo flow
-  const hasCircle = !!CIRCLE_APP_ID;
+  const hasCircle = circleReady();
 
   async function handleEmailContinue() {
     setError(null);
-    if (!hasCircle) {
-      // No Circle config: demo shortcut → setup
-      setStep("code");
-      return;
-    }
+    if (!hasCircle) { r.push("/setup"); return; } // no Circle App ID configured: demo path
     setLoading(true);
+    setStep("code");
     try {
-      await sendEmailOtp(email);
-      setStep("code");
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerify() {
-    const otp = code.join("");
-    setError(null);
-    if (!hasCircle) {
-      // Demo shortcut: skip auth → setup
-      r.push("/setup");
-      return;
-    }
-    setLoading(true);
-    try {
-      const userToken = await verifyEmailOtp(email, otp);
-      const { hasProfile } = await finishSignIn(userToken);
+      const login = await signInWithEmail(email); // emails the code, opens Circle's window to enter it
+      const { hasProfile } = await finishLogin(login); // creates the wallet on first visit, then our session
       r.push(hasProfile ? "/social" : "/setup");
     } catch (e) {
       setError((e as Error).message);
+      setStep("start");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleGoogle() {
+  function handleGoogle() {
     setError(null);
-    if (!hasCircle) {
-      // Demo shortcut
-      r.push("/setup");
-      return;
-    }
-    // Circle's Google OAuth is handled by their SDK popup. We redirect to a Circle-hosted OAuth page
-    // with our appId, then Circle returns a userToken via redirect/postMessage.
-    // For now, show a message instructing the user to use email until the OAuth redirect is configured.
-    setError("Google sign-in requires the Circle App ID to be configured. Use email OTP instead.");
+    if (!hasCircle) { r.push("/setup"); return; }
+    setError("Google sign-in is coming next. Please use your email for now.");
   }
 
   return (
@@ -172,28 +92,12 @@ export default function SignUp() {
           </div>
         ) : (
           <div className="rise">
-            <button onClick={() => { setStep("start"); setCode(["","","","","",""]); setError(null); }} className="mb-5 text-[13px] text-white/55">← Change email</button>
+            <button onClick={() => { setStep("start"); setError(null); }} className="mb-5 text-[13px] text-white/55">← Change email</button>
             <h1 className="text-[28px] font-semibold tracking-[-0.035em]">Check your inbox</h1>
-            <p className="mt-2 text-[14px] text-white/60">We sent a 6-digit code to <span className="text-white">{email}</span></p>
-
+            <p className="mt-2 text-[14px] leading-relaxed text-white/60">We sent a 6-digit code to <span className="text-white">{email}</span>. Enter it in the secure window that just opened.</p>
             {error && <p className="mt-3 rounded-xl bg-red-900/60 px-4 py-2.5 text-[13px] text-red-200">{error}</p>}
-
-            <div className="mt-7 grid grid-cols-6 gap-2">
-              {code.map((c, i) => (
-                <input key={i} id={`c${i}`} aria-label={`Digit ${i + 1}`} inputMode="numeric" maxLength={1} value={c}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(-1);
-                    const n = [...code]; n[i] = v; setCode(n);
-                    if (v && i < 5) document.getElementById(`c${i + 1}`)?.focus();
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Backspace" && !code[i] && i > 0) document.getElementById(`c${i - 1}`)?.focus(); }}
-                  className="num h-[58px] rounded-[16px] border border-white/15 bg-white/[0.07] text-center text-[22px] font-medium text-white outline-none backdrop-blur-xl focus:border-white/40" />
-              ))}
-            </div>
-            <button id="verify-otp" disabled={code.join("").length < 6 || loading} onClick={handleVerify} className="press mt-6 h-[52px] w-full rounded-full bg-white text-[15px] font-medium text-black disabled:opacity-35">
-              {loading ? "Verifying…" : "Verify"}
-            </button>
-            <p className="mt-4 text-center text-[12px] text-white/40">Didn&apos;t get it? <button onClick={handleEmailContinue} className="text-white/70 underline-offset-4 hover:underline">Resend</button></p>
+            <div className="mt-8 flex items-center gap-3 text-[13px] text-white/55"><span className="h-4 w-4 rounded-full border-2 border-white/50 border-t-transparent" style={{ animation: "spin .8s linear infinite" }} />Waiting for you…</div>
+            <p className="mt-6 text-[12px] leading-relaxed text-white/40">First time here? You&apos;ll also approve creating your wallet. There&apos;s no seed phrase to keep, and sending money costs you no network fees.</p>
           </div>
         )}
       </div>

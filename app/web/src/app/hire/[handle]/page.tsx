@@ -1,8 +1,8 @@
 "use client";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { people, demoCard } from "@/lib/demo";
+import { useRouter } from "next/navigation";
+import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 import { TopBar } from "@/components/ui";
 import { Check, Plus } from "@/components/icons";
 
@@ -16,20 +16,32 @@ const RULES = [
 
 export default function Hire({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = use(params);
-  const p = people[handle];
+  const r = useRouter();
+  type Who = { wallet: string; name: string; avatar: string; title: string; jobs: number; rating: string; level: { name: string; upfrontPct: number } };
+  const [p, setP] = useState<Who | null>(null);
+  const [missing, setMissing] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/u/${encodeURIComponent(handle)}`).then((x) => (x.ok ? x.json() : Promise.reject()))
+      .then((d) => { if (live) setP({ wallet: d.profile.wallet, name: d.profile.displayName, avatar: d.profile.avatar ?? "/demo/av_5.jpg", title: d.profile.title ?? "", jobs: d.reputation?.completed ?? 0, rating: d.reputation?.ratingAvg ? Number(d.reputation.ratingAvg).toFixed(1) : "–", level: d.level }); })
+      .catch(() => live && setMissing(true));
+    return () => { live = false; };
+  }, [handle]);
   const [step, setStep] = useState(0);
-  const [title, setTitle] = useState("Ankara two-piece set");
-  const [deliv, setDeliv] = useState(["Top and skirt, made to my measurements", "One fitting session"]);
-  const [done, setDone] = useState("Both pieces fit and are delivered to my address in Lekki");
-  const [total, setTotal] = useState("85");
+  const [title, setTitle] = useState("");
+  const [deliv, setDeliv] = useState([""]);
+  const [done, setDone] = useState("");
+  const [total, setTotal] = useState("");
   const [plan, setPlan] = useState<Plan>("full");
   const [ms, setMs] = useState(["30", "30", "25"]);
   const [rev, setRev] = useState(1);
   const [days, setDays] = useState(7);
   const [now] = useState(() => Date.now());
   const [rule, setRule] = useState<(typeof RULES)[number]["id"]>("Split5050");
-  if (!p) notFound();
-  const { level } = demoCard(handle);
+  const level = p?.level ?? { name: "New", upfrontPct: 0 };
   const canUpfront = level.upfrontPct > 0;
   const t = Number(total) || 0;
   const over = t > 100, under = t < 1;
@@ -39,12 +51,37 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   const up = (t * level.upfrontPct) / 100;
   const schedule = plan === "upfront" ? [[`When work starts (${level.upfrontPct}%)`, up], ["When you approve", t - up]] : plan === "full" ? [["When you approve", t]] : ms.map((m, i) => [`Milestone ${i + 1} approved`, Number(m) || 0]);
 
+  if (missing) return <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col items-center justify-center px-6 text-center"><h1 className="text-[22px] font-semibold">We couldn&apos;t find that person</h1><Link href="/search" className="btn btn-ghost mt-6">Search people</Link></main>;
+  if (!p) return <main className="mx-auto min-h-dvh max-w-[560px] px-5 pt-24"><div className="skeleton h-16 rounded-[20px]" /><div className="skeleton mt-4 h-40 rounded-[20px]" /></main>;
+
+  async function send() {
+    if (!p) return;
+    setErr(null); setSending(true);
+    try {
+      const units = (n: number) => Math.round(n * 1e6);
+      const body: Record<string, unknown> = {
+        counterparty: p.wallet, iAm: "client", title: title.trim(), deliverables: deliv.map((d) => d.trim()).filter(Boolean),
+        doneMeans: done.trim(), revisions: rev, deadline: Math.floor((now + days * 864e5) / 1000), deadlockRule: rule,
+      };
+      if (plan === "milestones") { body.upfront = 0; body.milestones = ms.map((m) => units(Number(m) || 0)); }
+      else if (plan === "upfront") { body.total = units(t); body.upfrontBps = level.upfrontPct * 100; }
+      else body.total = units(t);
+      const res = await fetch("/api/jobs", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const j = await res.json();
+      if (res.status === 401) { r.push("/signup"); return; }
+      if (!res.ok) throw new Error(j.error ?? "Could not create the agreement");
+      setJobId(j.id);
+      if (circleReady()) await sendCalls(j.calls as Call[]); // propose onchain (gasless), user approves in Circle's window
+      setStep(2);
+    } catch (e) { setErr((e as Error).message); } finally { setSending(false); }
+  }
+
   if (step === 2) return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col items-center justify-center px-6 text-center">
       <div className="rise grid h-16 w-16 place-items-center rounded-full bg-fg text-[var(--bg)]"><Check size={28} /></div>
       <h1 className="rise mt-6 text-[26px] font-semibold tracking-[-0.035em]" style={{ animationDelay: "80ms" }}>Agreement sent</h1>
       <p className="rise mt-2 max-w-[300px] text-[14px] leading-relaxed text-muted" style={{ animationDelay: "140ms" }}>When {p.name.split(" ")[0]} accepts, you&apos;ll fund ${t.toFixed(2)} into escrow. Nothing leaves your wallet until then.</p>
-      <Link href="/jobs/1039" className="btn btn-solid rise mt-8 w-full" style={{ animationDelay: "200ms" }}>View invoice</Link>
+      <Link href={jobId ? `/jobs/${jobId}` : "/jobs"} className="btn btn-solid rise mt-8 w-full" style={{ animationDelay: "200ms" }}>View invoice</Link>
       <Link href="/social" className="mt-3 text-[13px] text-muted">Back to feed</Link>
     </main>
   );
@@ -157,7 +194,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
         <div className="w-full max-w-[440px]">
           {step === 0
             ? <button disabled={over || under || !msOk || !title.trim()} onClick={() => setStep(1)} className="btn btn-solid w-full">Review · ${t.toFixed(2)}</button>
-            : <div className="flex gap-2"><button onClick={() => setStep(0)} className="btn btn-ghost">Edit</button><button onClick={() => setStep(2)} className="btn btn-solid flex-1">Send agreement</button></div>}
+            : <div className="flex flex-col gap-2">{err && <p className="rounded-[14px] hairline px-4 py-2.5 text-[13px] text-fg">{err}</p>}<div className="flex gap-2"><button disabled={sending} onClick={() => setStep(0)} className="btn btn-ghost">Edit</button><button disabled={sending} onClick={send} className="btn btn-solid flex-1">{sending ? "Waiting for approval…" : "Send agreement"}</button></div></div>}
         </div>
       </div>
     </main>

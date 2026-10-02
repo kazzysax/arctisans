@@ -66,6 +66,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
 
   useEffect(() => {
     if (handle === "me") return; // still waiting for auth
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset to loading when the profile being viewed changes
     setData({ ok: false, state: "loading" });
     fetch(`/api/u/${encodeURIComponent(handle)}`, { credentials: "include" })
       .then((r) => {
@@ -318,7 +319,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         <div className="mt-4 flex gap-2"><button className="btn btn-ghost flex-1">Copy link</button><button className="btn btn-solid flex-1">Share card</button></div>
       </Sheet>
 
-      <TipSheet open={tip} onClose={() => setTip(false)} name={p.displayName} avatar={p.avatar ?? "/demo/av_49.jpg"} />
+      <TipSheet open={tip} onClose={() => setTip(false)} name={p.displayName} avatar={p.avatar ?? "/demo/av_49.jpg"} to={p.wallet} />
     </div>
   );
 }

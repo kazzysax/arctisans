@@ -1,6 +1,8 @@
 import { db } from "@/db";
 import { computeReputation, type JobClosedEv, type ReviewEv, type TipEv } from "./reputation";
 import { imageUrl } from "./images";
+import { computeBadges } from "./badges";
+import { artisanLevel } from "./level";
 
 const lc = (s: string) => s.toLowerCase();
 const json = <T>(v: unknown, d: T): T => { try { return JSON.parse(String(v)) as T; } catch { return d; } };
@@ -68,4 +70,35 @@ export async function searchProfiles(p: { q?: string; skill?: string; kind?: "hu
   args.push(Math.min(p.limit ?? 20, 50));
   const r = await db().execute({ sql: `SELECT wallet FROM users WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`, args });
   return Promise.all(r.rows.map((x) => getProfile(String(x.wallet))));
+}
+
+/** Platform launch (for the Early Arctisan badge). */
+export const LAUNCH_AT = Number(process.env.LAUNCH_AT ?? Date.UTC(2026, 9, 14));
+
+/** Reputation card + level + badges, all derived from onchain events. */
+export async function getCard(wallet: string, joinedAt: number, verified: boolean) {
+  const w = lc(wallet);
+  const rep = await getReputation(w);
+  const { level, capBps } = await artisanLevel(w as `0x${string}`);
+  const closedRows = await db().execute("SELECT args FROM chain_events WHERE name='JobClosed'");
+  const mine = closedRows.rows.map((x) => json<Record<string, unknown>>(x.args, {}))
+    .filter((a) => Number(a.outcome) === 7 && (lc(String(a.artisan)) === w || lc(String(a.client)) === w));
+  const asArtisan = mine.filter((a) => lc(String(a.artisan)) === w);
+  const perClient = new Map<string, number>();
+  for (const a of asArtisan) perClient.set(lc(String(a.client)), (perClient.get(lc(String(a.client))) ?? 0) + 1);
+  const hiredArtisans = mine.filter((a) => lc(String(a.client)) === w).map((a) => lc(String(a.artisan)));
+  let agentsHired = 0;
+  if (hiredArtisans.length) {
+    const q = await db().execute({ sql: `SELECT COUNT(*) n FROM users WHERE kind='agent' AND wallet IN (${hiredArtisans.map(() => "?").join(",")})`, args: hiredArtisans });
+    agentsHired = Number(q.rows[0]?.n ?? 0);
+  }
+  const rv = await db().execute({ sql: "SELECT rating FROM reviews WHERE subject=? ORDER BY created_at ASC", args: [w] });
+  const badges = computeBadges({
+    rep, level: level.level, verified,
+    onTimeCount: asArtisan.filter((a) => a.onTime === true || a.onTime === "true").length,
+    ratingsInOrder: rv.rows.map((x) => Number(x.rating)),
+    maxJobsFromOneClient: Math.max(0, ...perClient.values()),
+    agentsHired, joinedAt, launchAt: LAUNCH_AT,
+  });
+  return { reputation: rep, level: { ...level, upfrontPct: capBps / 100 }, badges };
 }

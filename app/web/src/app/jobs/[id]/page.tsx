@@ -16,10 +16,11 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
   if (!j) notFound();
   const client = people[j.client], art = people[j.artisan];
   const frozen = j.total - j.released;
+  const upfront = j.state === "Completed" ? 0 : j.released;
   const steps = [
     ["Agreement accepted", "Oct 7", true], ["Funded into escrow", `$${j.total.toFixed(2)}`, j.state !== "Proposed"],
-    ["Work started · first part released", `$${(j.total / 2).toFixed(2)}`, j.released > 0], ["Delivered", "Waiting for approval", j.state === "Delivered" || j.state === "Completed"],
-    ["Approved · rest released", `$${(j.total / 2).toFixed(2)}`, j.state === "Completed"],
+    ["Work started" + (upfront ? " · upfront released" : ""), upfront ? `$${upfront.toFixed(2)}` : "Paid on approval", j.state !== "Proposed" && j.state !== "Funded"], ["Delivered", "Waiting for approval", j.state === "Delivered" || j.state === "Completed"],
+    ["Approved · rest released", `$${(j.total - upfront).toFixed(2)}`, j.state === "Completed"],
   ] as const;
   return (
     <main className="mx-auto min-h-dvh max-w-[480px] pb-36">

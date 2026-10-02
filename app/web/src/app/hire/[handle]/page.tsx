@@ -2,12 +2,12 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { people } from "@/lib/demo";
+import { people, demoCard } from "@/lib/demo";
 import { TopBar } from "@/components/ui";
 import { Check, Plus } from "@/components/icons";
 
 // Agreement builder. Both sides agree these rules BEFORE any money moves; they are fingerprinted onchain.
-type Plan = "5050" | "full" | "milestones";
+type Plan = "upfront" | "full" | "milestones";
 const RULES = [
   { id: "Split5050", t: "Split 50/50", d: "The frozen part is shared equally" },
   { id: "ToClient", t: "Back to client", d: "Safer for the client" },
@@ -22,19 +22,22 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   const [deliv, setDeliv] = useState(["Top and skirt, made to my measurements", "One fitting session"]);
   const [done, setDone] = useState("Both pieces fit and are delivered to my address in Lekki");
   const [total, setTotal] = useState("85");
-  const [plan, setPlan] = useState<Plan>("5050");
+  const [plan, setPlan] = useState<Plan>("full");
   const [ms, setMs] = useState(["30", "30", "25"]);
   const [rev, setRev] = useState(1);
   const [days, setDays] = useState(7);
   const [now] = useState(() => Date.now());
   const [rule, setRule] = useState<(typeof RULES)[number]["id"]>("Split5050");
   if (!p) notFound();
+  const { level } = demoCard(handle);
+  const canUpfront = level.upfrontPct > 0;
   const t = Number(total) || 0;
   const over = t > 100, under = t < 1;
   const msSum = ms.reduce((a, b) => a + (Number(b) || 0), 0);
   const msOk = plan !== "milestones" || Math.abs(msSum - t) < 0.001;
   const deadline = new Date(now + days * 864e5).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  const schedule = plan === "5050" ? [["When work starts", t / 2], ["When you approve", t / 2]] : plan === "full" ? [["When you approve", t]] : ms.map((m, i) => [`Milestone ${i + 1} approved`, Number(m) || 0]);
+  const up = (t * level.upfrontPct) / 100;
+  const schedule = plan === "upfront" ? [[`When work starts (${level.upfrontPct}%)`, up], ["When you approve", t - up]] : plan === "full" ? [["When you approve", t]] : ms.map((m, i) => [`Milestone ${i + 1} approved`, Number(m) || 0]);
 
   if (step === 2) return (
     <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
@@ -74,15 +77,18 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
               <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[22px] text-faint">$</span>
                 <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^\d.]/g, ""))} className="field num h-[64px] pl-9 text-[26px] font-medium" />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-faint">USDC</span></div>
-              <span className={`text-[12px] ${over || under ? "text-fg" : "text-faint"}`}>{over ? "The limit is $100 per job for now." : under ? "Minimum is $1." : "No platform fee."}</span>
+              <span className={`text-[12px] ${over || under ? "text-fg" : "text-faint"}`}>{over ? "The limit is $100 per job for now." : under ? "Minimum is $1." : "No platform fee. Gas is sponsored, so it's free to send."}</span>
             </div>
 
             <div className="flex flex-col gap-2"><span className="label">How money is released</span>
               <div className="grid grid-cols-3 gap-1 rounded-full hairline p-1">
-                {([["5050", "50 / 50"], ["full", "On approval"], ["milestones", "Milestones"]] as const).map(([k, l]) => (
-                  <button key={k} onClick={() => setPlan(k)} className={`h-9 rounded-full text-[13px] transition-colors ${plan === k ? "bg-pill font-medium text-pill-fg" : "text-muted"}`}>{l}</button>
+                {([["full", "On approval"], ["milestones", "Milestones"], ["upfront", canUpfront ? `${level.upfrontPct}% upfront` : "Upfront"]] as const).map(([k, l]) => (
+                  <button key={k} disabled={k === "upfront" && !canUpfront} onClick={() => setPlan(k)} className={`h-9 rounded-full text-[13px] transition-colors disabled:text-faint ${plan === k ? "bg-pill font-medium text-pill-fg" : "text-muted"}`}><span className="inline-flex items-center gap-1">{k === "upfront" && !canUpfront && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.5" /><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>}{l}</span></button>
                 ))}
               </div>
+              <span className="text-[12px] leading-relaxed text-faint">{canUpfront
+                ? `${p.name.split(" ")[0]} is ${level.name}: verified with a clean record, so up to ${level.upfrontPct}% can be paid when work starts.`
+                : `Upfront payment unlocks when an artisan is verified and has a proven record (Trusted level). Until then, money is released on approval.`}</span>
               {plan === "milestones" && (
                 <div className="mt-2 flex flex-col gap-2">
                   {ms.map((m, i) => (

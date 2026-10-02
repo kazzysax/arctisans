@@ -76,3 +76,9 @@ Follows `PRODUCT_BUILDING_PLAYBOOK.md`. Source spec: `ARC_BUILD_RECORD_Arctisans
 - **Agent wallets:** Circle developer-controlled wallets.
 - **Email codes:** we send them ourselves through an SMTP provider (e.g. Resend).
 - **Scope:** SCOPE_v1.md APPROVED. Phase 2 implementation research started.
+
+
+## Oct 2: fees, upfront, badges (user)
+- "for fees they only pay the ecosystem fees for now, go it's gasless": feeless is enforced in the contract (MAX_FEE_BPS = 0); users pay only Arc gas, sponsored by Gas Station.
+- "Upfront payment should only be allowed for some level of verified artisans": levels New 0% / Trusted 30% / Pro 50%, enforced in the escrow at propose and fund. Abandoning a job removes the privilege forever.
+- "Add badges first": 12 badges built (lib/badges.ts) and shown in the UI.

@@ -75,8 +75,8 @@ export const reviews: Review[] = [
 export type JobState = "Proposed" | "Funded" | "Active" | "Delivered" | "Settlement" | "Completed";
 export type Job = { id: string; title: string; client: string; artisan: string; total: number; split: string; state: JobState; deadline: string; revisions: string; released: number; next: string };
 export const jobs: Job[] = [
-  { id: "1042", title: "Bakery brand identity", client: "amara", artisan: "lena", total: 60, split: "50% on start · 50% on approval", state: "Delivered", deadline: "Oct 18", revisions: "1 of 2 used", released: 30, next: "Review the delivery" },
-  { id: "1039", title: "Ankara two-piece set", client: "kai", artisan: "amara", total: 85, split: "50 / 50", state: "Active", deadline: "Oct 21", revisions: "0 of 1 used", released: 42.5, next: "Waiting for delivery" },
+  { id: "1042", title: "Bakery brand identity", client: "amara", artisan: "lena", total: 60, split: "30% on start (Trusted) · 70% on approval", state: "Delivered", deadline: "Oct 18", revisions: "1 of 2 used", released: 18, next: "Review the delivery" },
+  { id: "1039", title: "Ankara two-piece set", client: "kai", artisan: "amara", total: 85, split: "50% on start (Pro) · 50% on approval", state: "Active", deadline: "Oct 21", revisions: "0 of 1 used", released: 42.5, next: "Waiting for delivery" },
   { id: "1033", title: "Market brief: Lagos fintech", client: "eli", artisan: "atlas", total: 25, split: "100% on approval", state: "Completed", deadline: "Oct 9", revisions: "0 of 1 used", released: 25, next: "Leave a review" },
   { id: "1048", title: "Wedding invitation lettering", client: "sami", artisan: "amara", total: 40, split: "3 milestones", state: "Proposed", deadline: "Oct 30", revisions: "2 included", released: 0, next: "Accept terms" },
 ];
@@ -88,3 +88,18 @@ export const notifications = [
   { kind: "follow", who: "noor", text: "started following you", ago: "2d" },
   { kind: "released", who: "ivy", text: "released $42.50 to your wallet", ago: "3d" },
 ];
+
+import { computeBadges, type Badge } from "./badges";
+import { computeReputation } from "./reputation";
+export function demoCard(handle: string): { level: { level: 1 | 2 | 3; name: string; upfrontPct: number }; badges: Badge[] } {
+  const p = people[handle], f = profileOf(handle);
+  const jobs = p?.jobs ?? 0;
+  const lvl: 1 | 2 | 3 = !p?.verified ? 1 : jobs >= 20 && f.clients >= 10 ? 3 : jobs >= 5 && f.clients >= 3 ? 2 : 1;
+  const rep = { ...computeReputation("0x0", [], [], []), completed: jobs, earned: f.earned * 1e6, tipsCount: Math.round(f.tips / 2), deadlocked: f.deadlocked };
+  const badges = computeBadges({
+    rep, level: lvl, verified: !!p?.verified, onTimeCount: Math.round((jobs * f.onTime) / 100),
+    ratingsInOrder: handle === "amara" ? [5, 5, 4, 5, 5, 5, 4, 5, 5] : [5, 5, 4, 5], maxJobsFromOneClient: handle === "amara" ? 4 : 2,
+    agentsHired: handle === "eli" ? 1 : 0, joinedAt: Date.UTC(2026, 9, 14), launchAt: Date.UTC(2026, 9, 14),
+  });
+  return { level: { level: lvl, name: ["New", "Trusted", "Pro"][lvl - 1], upfrontPct: [0, 30, 50][lvl - 1] }, badges };
+}

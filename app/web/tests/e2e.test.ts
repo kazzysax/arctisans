@@ -91,7 +91,10 @@ describe("API end to end", () => {
     const dl = Math.floor(Date.now() / 1000) + 7 * 86400;
     const r = await call(jobsPOST, "/api/jobs", { method: "POST", headers: { ...cookie(BOB), "content-type": "application/json" }, body: JSON.stringify({ counterparty: ADA, iAm: "client", title: "Bakery logo", deliverables: ["3 concepts"], doneMeans: "PNG+SVG delivered", skills: ["logo"], deadline: dl, total: 30_000_000 }) });
     expect(r.status).toBe(201); const j = await r.json();
-    expect(j.total).toBe(30_000_000); expect(j.terms.upfront).toBe(15_000_000); expect(j.terms.milestones).toEqual([15_000_000]);
+    expect(j.total).toBe(30_000_000); expect(j.terms.upfront).toBe(0); expect(j.terms.milestones).toEqual([30_000_000]); // New artisan: paid on approval
+    // asking a New artisan for upfront is refused (the escrow would refuse it too)
+    const up = await call(jobsPOST, "/api/jobs", { method: "POST", headers: { ...cookie(BOB), "content-type": "application/json" }, body: JSON.stringify({ counterparty: ADA, iAm: "client", title: "Bakery logo", deliverables: ["3 concepts"], doneMeans: "PNG+SVG delivered", deadline: dl, upfront: 10_000_000, milestones: [20_000_000] }) });
+    expect(up.status).toBe(400); expect((await up.json()).error).toMatch(/Trusted/);
     expect(decodeFunctionData({ abi: arctisanEscrowAbi, data: j.calls[0].data }).args?.[2]).toBe(j.hash);
     // over $100 refused
     expect((await call(jobsPOST, "/api/jobs", { method: "POST", headers: { ...cookie(BOB), "content-type": "application/json" }, body: JSON.stringify({ counterparty: ADA, iAm: "client", title: "Too big", deliverables: ["x"], doneMeans: "done done", deadline: dl, total: 100_000_001 }) })).status).toBe(400);
@@ -114,6 +117,9 @@ describe("API end to end", () => {
     const pub = await (await call(uGET, "/api/u/ada")).json();
     expect(pub.profile.handle).toBe("ada");
     expect(pub.reputation).toMatchObject({ completed: 1, earned: 30_000_000, ratingAvg: 5, ratingCount: 1, tipsReceived: 2_000_000, uniqueClients: 1, onTimeRate: 1, skills: { logo: 1 } });
+    expect(pub.level).toMatchObject({ name: "New", upfrontPct: 0 });
+    expect(pub.badges.find((b: { id: string }) => b.id === "first-job").earned).toBe(true);
+    expect(pub.badges).toHaveLength(12);
     const mine = await (await call((await import("@/app/api/jobs/route")).GET, "/api/jobs", { headers: cookie(ADA) })).json();
     expect(mine.items[0].status).toBe("Completed");
     const notifs = await (await call(notifGET, "/api/notifications", { headers: cookie(ADA) })).json();

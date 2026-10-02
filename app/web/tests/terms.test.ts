@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TermsSchema, hashTerms, canonicalize, defaultSplit, totalOf } from "@/lib/terms";
+import { TermsSchema, hashTerms, canonicalize, defaultSplit, totalOf, levelOf } from "@/lib/terms";
 import { usdcToMicro, microToUsdc } from "@/lib/money";
 
 const A = "0x00000000000000000000000000000000000000a1", C = "0x00000000000000000000000000000000000000c1";
@@ -20,10 +20,19 @@ describe("terms", () => {
     expect(() => TermsSchema.parse({ ...base, artisan: C })).toThrow();
     expect(TermsSchema.parse({ ...base, upfront: 0, milestones: [100_000_000] })).toBeTruthy();
   });
-  it("default split is 50/50 and sums exactly", () => {
-    const s = defaultSplit(33_333_333);
-    expect(s.upfront + s.milestones[0]).toBe(33_333_333);
-    expect(totalOf({ upfront: s.upfront, milestones: s.milestones })).toBe(33_333_333);
+  it("default plan pays on approval; upfront only within the level cap, and sums exactly", () => {
+    expect(defaultSplit(33_333_333)).toEqual({ upfront: 0, milestones: [33_333_333] });
+    const t = defaultSplit(33_333_333, 3000); expect(t.upfront).toBe(9_999_999); expect(totalOf(t)).toBe(33_333_333);
+    expect(defaultSplit(10_000_000, 3000, 5000).upfront).toBe(3_000_000); // can't ask beyond the cap
+    expect(defaultSplit(10_000_000, 5000, 2000).upfront).toBe(2_000_000);
+  });
+  it("levels mirror the contract", () => {
+    const r = { completed: 20, uniqueClients: 10, abandoned: 0, verified: true };
+    expect(levelOf(r).name).toBe("Pro");
+    expect(levelOf({ ...r, verified: false }).name).toBe("New");
+    expect(levelOf({ ...r, abandoned: 1 }).name).toBe("New");
+    expect(levelOf({ ...r, completed: 5, uniqueClients: 3 }).name).toBe("Trusted");
+    expect(levelOf({ ...r, completed: 25, uniqueClients: 2 }).name).toBe("New");
   });
   it("canonicalize sorts keys", () => expect(canonicalize({ b: 1, a: [2, { d: 1, c: 2 }] })).toBe('{"a":[2,{"c":2,"d":1}],"b":1}'));
   it("money parsing", () => {

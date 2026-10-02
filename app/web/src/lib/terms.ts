@@ -51,8 +51,27 @@ export function hashTerms(t: Terms): `0x${string}` {
   return keccak256(toBytes(canonicalize(t)));
 }
 
-/** Default money plan: 50% on start, 50% on approval. */
-export function defaultSplit(total: number): { upfront: number; milestones: number[] } {
-  const upfront = Math.floor(total / 2);
+/** Upfront is earned, not default. Mirrors ArctisanEscrow.upfrontCapBps (the contract is the source of truth). */
+export type Level = { level: 1 | 2 | 3; name: "New" | "Trusted" | "Pro"; upfrontBps: 0 | 3000 | 5000 };
+export const LEVELS: Record<1 | 2 | 3, Level> = {
+  1: { level: 1, name: "New", upfrontBps: 0 },
+  2: { level: 2, name: "Trusted", upfrontBps: 3000 },
+  3: { level: 3, name: "Pro", upfrontBps: 5000 },
+};
+export type OnchainRecord = { completed: number; uniqueClients: number; abandoned: number; verified: boolean };
+export function levelOf(r: OnchainRecord): Level {
+  if (!r.verified || r.abandoned > 0) return LEVELS[1];
+  if (r.completed >= 20 && r.uniqueClients >= 10) return LEVELS[3];
+  if (r.completed >= 5 && r.uniqueClients >= 3) return LEVELS[2];
+  return LEVELS[1];
+}
+export function maxUpfront(total: number, capBps: number): number {
+  return Math.floor((total * capBps) / 10_000);
+}
+
+/** Default money plan: everything on approval. If the artisan's level allows it, the requested upfront share
+ *  (clamped to the level's cap) is released on start. */
+export function defaultSplit(total: number, capBps = 0, wantBps = capBps): { upfront: number; milestones: number[] } {
+  const upfront = maxUpfront(total, Math.min(capBps, wantBps));
   return { upfront, milestones: [total - upfront] };
 }

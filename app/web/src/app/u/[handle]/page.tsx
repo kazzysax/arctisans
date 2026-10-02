@@ -2,7 +2,10 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { notFound, useSearchParams } from "next/navigation";
-import { people, profileOf, portfolio, reviews, discover } from "@/lib/demo";
+import { people, profileOf, portfolio, reviews, discover, demoCard } from "@/lib/demo";
+import { BadgePin } from "@/components/BadgePin";
+import { Sheet } from "@/components/ui";
+import type { Badge } from "@/lib/badges";
 import { Back, Stat } from "@/components/ui";
 import { TabBar } from "@/components/TabBar";
 import { TipSheet } from "@/components/TipSheet";
@@ -10,7 +13,7 @@ import { SocialIcon } from "@/components/Social";
 import { Verified } from "@/components/Verified";
 import { Coin, Dots } from "@/components/icons";
 
-const TABS = ["Work", "CV", "Reviews"] as const;
+const TABS = ["Work", "CV", "Badges", "Reviews"] as const;
 
 export default function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle: raw } = use(params);
@@ -20,11 +23,15 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const [tab, setTab] = useState<(typeof TABS)[number]>("Work");
   const [following, setFollowing] = useState(false);
   const [tip, setTip] = useState(false);
+  const [card, setCard] = useState(false);
+  const [badge, setBadge] = useState<Badge | null>(null);
   if (!p) notFound();
   const f = profileOf(handle);
   const mine = raw === "me" || sp.get("new") === "1";
   const work = portfolio[handle] ?? discover.filter((d) => d.by === handle).flatMap((d) => d.photos).concat(["/demo/work_laptop.jpg", "/demo/work_fashion.jpg"]).slice(0, 6);
   const avg = p.rating ? p.rating.toFixed(1) : "New";
+  const { level, badges } = demoCard(handle);
+  const earned = badges.filter((b) => b.earned);
 
   return (
     <div className="relative mx-auto min-h-dvh max-w-[480px] pb-24">
@@ -69,13 +76,27 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         </div>
         <p className="mt-4 text-[14.5px] leading-relaxed text-fg/80">{f.bio}</p>
 
-        {/* reputation strip: facts only */}
-        <div className="mt-6 grid grid-cols-4 gap-2 rounded-[22px] hairline p-4">
-          <Stat value={p.jobs} label="Paid jobs" />
-          <Stat value={<>{avg}<span className="text-[14px] text-faint">★</span></>} label="Rating" />
-          <Stat value={`${f.onTime}%`} label="On time" />
-          <Stat value={`$${(f.earned / 1000).toFixed(1)}k`} label="Earned" />
-        </div>
+        {/* reputation card: facts only, tap for the full card */}
+        <button onClick={() => setCard(true)} className="press mt-6 block w-full overflow-hidden rounded-[22px] hairline text-left">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+            <span className="eyebrow">Reputation · on Arc</span>
+            <span className="flex items-center gap-1.5 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--img-bg)] ring-1 ring-line-strong" />{level.name}{level.upfrontPct > 0 && <span className="text-faint">· {level.upfrontPct}% upfront</span>}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2 p-4">
+            <Stat value={p.jobs} label="Paid jobs" />
+            <Stat value={<>{avg}<span className="text-[14px] text-faint">★</span></>} label="Rating" />
+            <Stat value={`${f.onTime}%`} label="On time" />
+            <Stat value={`$${(f.earned / 1000).toFixed(1)}k`} label="Earned" />
+          </div>
+          {earned.length > 0 && (
+            <div className="flex items-center gap-2 border-t border-line px-4 py-3">
+              <div className="flex -space-x-2">{earned.slice(0, 5).map((b) => <span key={b.id} className="rounded-full ring-2 ring-[var(--bg)]"><BadgePin id={b.id} earned size={28} /></span>)}</div>
+              <span className="text-[12.5px] text-muted">{earned.length} badges</span>
+              <span className="flex-1" />
+              <span className="text-[12px] text-faint">View card →</span>
+            </div>
+          )}
+        </button>
 
         {!mine && (
           <div className="mt-3 flex gap-2">
@@ -141,6 +162,22 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             </div>
           )}
 
+          {tab === "Badges" && (
+            <div>
+              <div className="flex items-baseline justify-between"><h2 className="text-[15px] font-medium">Earned</h2><span className="num text-[12px] text-faint">{earned.length} of {badges.length}</span></div>
+              <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-5">
+                {badges.map((b) => (
+                  <button key={b.id} onClick={() => setBadge(b)} className="press flex flex-col items-center gap-2 text-center">
+                    <BadgePin id={b.id} earned={b.earned} size={56} />
+                    <span className={`text-[11.5px] leading-tight ${b.earned ? "" : "text-faint"}`}>{b.name}</span>
+                    {!b.earned && b.goal > 1 && <span className="h-[2px] w-10 rounded-full bg-line"><span className="block h-full rounded-full bg-fg/60" style={{ width: `${(b.progress / b.goal) * 100}%` }} /></span>}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-6 text-[12px] leading-relaxed text-faint">Badges are earned from paid jobs, reviews and tips on Arc. They can&apos;t be bought or claimed.</p>
+            </div>
+          )}
+
           {tab === "Reviews" && (
             <div className="flex flex-col">
               {reviews.map((r, i) => {
@@ -165,6 +202,51 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           )}
         </div>
       </div>
+
+      <Sheet open={!!badge} onClose={() => setBadge(null)}>
+        {badge && (
+          <div className="flex flex-col items-center pb-2 text-center">
+            <BadgePin id={badge.id} earned={badge.earned} size={92} />
+            <h3 className="mt-5 text-[21px] font-semibold tracking-[-0.03em]">{badge.name}</h3>
+            <p className="mt-1.5 text-[14px] text-muted">{badge.how}</p>
+            {badge.goal > 1 && <div className="mt-5 w-full max-w-[260px]"><div className="flex justify-between text-[12px] text-faint"><span>Progress</span><span className="num">{badge.progress} / {badge.goal}</span></div><div className="mt-2 h-[3px] rounded-full bg-line"><div className="h-full rounded-full bg-fg" style={{ width: `${(badge.progress / badge.goal) * 100}%` }} /></div></div>}
+            <div className="mt-5 text-[11px] uppercase tracking-[0.16em] text-faint">{badge.earned ? "Earned · verified on Arc" : "Not earned yet"}</div>
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={card} onClose={() => setCard(false)}>
+        {/* shareable reputation card */}
+        <div className="overflow-hidden rounded-[26px] border border-line">
+          <div className="relative p-5 text-white">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/demo/bg_blue.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/45 to-black/20" />
+            <div className="relative flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.avatar} alt="" className="h-14 w-14 rounded-[18px] object-cover ring-2 ring-white/70" />
+              <div className="min-w-0 leading-tight">
+                <div className="flex items-center gap-1.5 text-[18px] font-semibold tracking-[-0.02em]">{p.name}{p.verified && <Verified size={15} onPhoto />}</div>
+                <div className="mt-0.5 text-[12.5px] text-white/70">@{p.handle} · {p.title}</div>
+              </div>
+            </div>
+            <div className="relative mt-5 flex items-end justify-between">
+              <div><div className="text-[10.5px] uppercase tracking-[0.2em] text-white/60">Level</div><div className="mt-1 font-serif text-[26px] uppercase tracking-[0.18em]">{level.name}</div></div>
+              <div className="text-right text-[11px] text-white/60">Since {f.since}<br />Arctisans · Arc</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-y-4 bg-bg-2 p-5">
+            <Stat value={p.jobs} label="Paid jobs" />
+            <Stat value={`${avg}★`} label="Rating" />
+            <Stat value={`${f.onTime}%`} label="On time" />
+            <Stat value={`$${f.earned.toLocaleString()}`} label="Earned" />
+            <Stat value={f.clients} label="Clients" />
+            <Stat value={f.deadlocked} label="Deadlocks" />
+          </div>
+          <div className="flex flex-wrap gap-1.5 border-t border-line bg-bg-2 px-5 py-4">{earned.map((b) => <BadgePin key={b.id} id={b.id} earned size={30} />)}</div>
+        </div>
+        <div className="mt-4 flex gap-2"><button className="btn btn-ghost flex-1">Copy link</button><button className="btn btn-solid flex-1">Share card</button></div>
+      </Sheet>
 
       <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} />
       <TabBar />

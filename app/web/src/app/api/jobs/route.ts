@@ -3,10 +3,12 @@ import { getAddress } from "viem";
 import { db } from "@/db";
 import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
-import { TermsSchema, hashTerms, defaultSplit, totalOf } from "@/lib/terms";
+import { TermsSchema, hashTerms, defaultSplit, totalOf, maxUpfront } from "@/lib/terms";
+import { artisanLevel } from "@/lib/level";
 import { proposeCalls } from "@/lib/tx";
 
-// Draft body: either explicit upfront/milestones, or just `total` (+ optional `milestoneCount`) for the default 50/50.
+// Draft body: either explicit upfront/milestones, or just `total` (+ optional `upfrontBps`). Default: paid on approval.
+// Upfront is only allowed up to the artisan's onchain level (New 0%, Trusted 30%, Pro 50%); the escrow enforces it too.
 const Draft = z.object({
   counterparty: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   iAm: z.enum(["client", "artisan"]),
@@ -15,7 +17,7 @@ const Draft = z.object({
   doneMeans: z.string().min(3).max(500), skills: z.array(z.string().min(1).max(30)).max(5).default([]),
   revisions: z.number().int().min(0).max(5).default(1), deadline: z.number().int().positive(),
   deadlockRule: z.enum(["Split5050", "ToClient", "ToArtisan"]).default("Split5050"),
-  total: z.number().int().positive().optional(), upfront: z.number().int().min(0).optional(), milestones: z.array(z.number().int().positive()).optional(),
+  total: z.number().int().positive().optional(), upfrontBps: z.number().int().min(0).max(5000).optional(), upfront: z.number().int().min(0).optional(), milestones: z.array(z.number().int().positive()).optional(),
 });
 
 /** Step 1: write the agreement. We store the exact terms + hash, and return the onchain "propose" call. */
@@ -26,11 +28,15 @@ export const POST = route("jobs-create", 30, async (req) => {
   if (other.toLowerCase() === wallet) return fail(400, "Pick someone else");
   const them = await db().execute({ sql: "SELECT wallet FROM users WHERE wallet=?", args: [other.toLowerCase()] });
   if (!them.rows.length) return fail(404, "That person has no profile yet");
+  const artisanAddr = d.iAm === "artisan" ? getAddress(wallet) : other;
+  const { capBps, level } = await artisanLevel(artisanAddr);
   let upfront = d.upfront, milestones = d.milestones;
   if (upfront === undefined || !milestones) {
     if (!d.total) return fail(400, "Give a total, or upfront + milestones");
-    ({ upfront, milestones } = defaultSplit(d.total));
+    ({ upfront, milestones } = defaultSplit(d.total, capBps, d.upfrontBps ?? 0));
   }
+  if (upfront > maxUpfront(upfront + milestones.reduce((a, b) => a + b, 0), capBps))
+    return fail(400, level.level === 1 ? "Upfront payment unlocks at the Trusted level. This job pays on approval." : `${level.name} artisans can take up to ${capBps / 100}% upfront`);
   if (d.deadline * 1000 <= Date.now()) return fail(400, "Deadline must be in the future");
   const me = getAddress(wallet);
   const terms = TermsSchema.parse({

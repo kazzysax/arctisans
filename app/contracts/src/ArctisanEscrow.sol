@@ -8,7 +8,9 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// Arctisans escrow. Money moves ONLY by the rules both parties agreed (see docs/SCOPE_v1.md, the 10 rules).
-/// @notice Non-custodial job escrow. Owner can tune cap/fee/pause for NEW jobs only; no function moves escrowed funds.
+/// @notice Non-custodial job escrow. Owner can tune the job cap and pause NEW jobs only; no function moves escrowed funds.
+/// Arctisans charges no fee: MAX_FEE_BPS is 0, so users only ever pay Arc network gas (sponsored by Gas Station).
+/// Upfront release is a privilege earned onchain: verified artisans with a clean, proven record (see upfrontCapBps).
 contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
     using SafeERC20 for IERC20;
 
@@ -44,9 +46,18 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
 
     uint256 public constant SILENCE = 3 days;
     uint256 public constant DEADLOCK_WINDOW = 48 hours;
-    uint16 public constant MAX_FEE_BPS = 500; // hard cap 5%
+    uint16 public constant MAX_FEE_BPS = 0;   // feeless, enforced: setParams can never add a fee
     uint8 public constant MAX_MILESTONES = 10;
     uint96 public constant MIN_JOB = 1e6; // $1 minimum
+    // Upfront levels. Only Completed jobs of at least $5 count, so a record can't be padded with $1 jobs.
+    uint96 public constant MIN_COUNTED_JOB = 5e6;
+    uint16 public constant L2_UPFRONT_BPS = 3000; // Trusted: up to 30% on start
+    uint16 public constant L3_UPFRONT_BPS = 5000; // Pro:     up to 50% on start
+
+    struct Record { uint32 completed; uint32 uniqueClients; uint32 abandoned; bool verified; }
+    mapping(address => Record) public records;                     // artisan track record, written only by job outcomes
+    mapping(address => mapping(address => bool)) internal _served; // artisan => client => counted already
+    address public verifier;                                        // attests identity proofs (GitHub / X); cannot move money
 
     IERC20 public immutable usdc;
     uint96 public maxJobAmount = 100e6; // $100
@@ -77,10 +88,35 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         uint96 paidToArtisan, uint96 refundedToClient, bool onTime);
     event PayoutDeferred(address indexed to, uint256 amount);
     event ParamsChanged(uint96 maxJobAmount, uint16 feeBps, address feeRecipient);
+    event VerifierChanged(address verifier);
+    event ArtisanVerified(address indexed artisan, bool verified);
 
     error BadState(); error NotParty(); error BadAmount(); error Expired(); error NotExpired(); error TermsMismatch();
+    error UpfrontNotAllowed();
 
-    constructor(IERC20 _usdc, address _owner) Ownable(_owner) { usdc = _usdc; feeRecipient = _owner; }
+    constructor(IERC20 _usdc, address _owner) Ownable(_owner) { usdc = _usdc; feeRecipient = _owner; verifier = _owner; }
+
+    // ---------------- upfront levels ----------------
+    /// Max share of a job (in bps) this artisan may receive on start.
+    /// L1 New (default): 0%. Paid on approval / milestones only.
+    /// L2 Trusted: verified + 5 completed jobs ($5+) for 3+ different clients + never abandoned a job: 30%.
+    /// L3 Pro:     verified + 20 completed jobs for 10+ different clients + never abandoned a job: 50%.
+    function upfrontCapBps(address artisan) public view returns (uint16) {
+        Record storage r = records[artisan];
+        if (!r.verified || r.abandoned > 0) return 0;
+        if (r.completed >= 20 && r.uniqueClients >= 10) return L3_UPFRONT_BPS;
+        if (r.completed >= 5 && r.uniqueClients >= 3) return L2_UPFRONT_BPS;
+        return 0;
+    }
+    function _checkUpfront(address artisan, uint96 upfront, uint96 total) internal view {
+        if (upfront > 0 && uint256(upfront) * 10_000 > uint256(total) * upfrontCapBps(artisan)) revert UpfrontNotAllowed();
+    }
+    function setVerifier(address v) external onlyOwner { if (v == address(0)) revert NotParty(); verifier = v; emit VerifierChanged(v); }
+    function setVerified(address artisan, bool ok) external {
+        if (msg.sender != verifier) revert NotParty();
+        records[artisan].verified = ok;
+        emit ArtisanVerified(artisan, ok);
+    }
 
     // ---------------- agreement ----------------
     function propose(address client, address artisan, bytes32 termsHash, uint96 upfront, uint96[] calldata milestones,
@@ -92,6 +128,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         for (uint256 i; i < milestones.length; ++i) { if (milestones[i] == 0) revert BadAmount(); sum += milestones[i]; }
         if (sum < MIN_JOB || sum > maxJobAmount) revert BadAmount();
         if (deadline <= block.timestamp) revert Expired();
+        _checkUpfront(artisan, upfront, uint96(sum));
         id = nextJobId++;
         Job storage j = jobs[id];
         (j.client, j.artisan, j.termsHash, j.total, j.upfront) = (client, artisan, termsHash, uint96(sum), upfront);
@@ -120,6 +157,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         if (msg.sender != j.client) revert NotParty();
         if (termsHash != j.termsHash) revert TermsMismatch();
         if (!(j.status == Status.Agreed || (j.status == Status.Proposed && j.artisanAgreed))) revert BadState();
+        _checkUpfront(j.artisan, j.upfront, j.total); // level re-checked when money is committed
         if (!j.clientAgreed) { j.clientAgreed = true; emit TermsAgreed(id, msg.sender, termsHash); }
         j.status = Status.Funded;
         totalLocked += j.total;
@@ -188,6 +226,11 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
             j.status = Status.Completed;
             uint96 rest = j.total - j.released; // remainder-safe
             _release(id, j, rest, m);
+            if (j.total >= MIN_COUNTED_JOB) {
+                Record storage r = records[j.artisan];
+                r.completed++;
+                if (!_served[j.artisan][j.client]) { _served[j.artisan][j.client] = true; r.uniqueClients++; }
+            }
             emit JobClosed(id, j.client, j.artisan, Status.Completed, j.released, 0, block.timestamp <= j.deadline);
         } else {
             j.status = Status.Active; j.clockStart = uint64(block.timestamp);
@@ -202,6 +245,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         if (s == Status.Active) {
             if (block.timestamp <= j.clockStart + SILENCE) revert NotExpired();
             j.status = Status.Abandoned;
+            records[j.artisan].abandoned++; // permanently loses upfront privilege
             uint96 refund = j.total - j.released;
             totalLocked -= refund;
             _pay(j.client, refund);

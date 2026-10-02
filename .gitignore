@@ -6,6 +6,9 @@ docs/*
 !docs/RESEARCH_REPORT.md
 !docs/DECISION_RECORD.md
 !docs/PROOF.md
+!docs/next/
+docs/next/*
+!docs/next/HANDOFF_NEXT_STEPS.md
 !docs/research/
 docs/research/*
 !docs/research/R1_arc_circle.md

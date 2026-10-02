@@ -1,0 +1,22 @@
+# root
+research-scratch/
+docs/*
+!docs/SCOPE_v1.md
+!docs/BACKEND_API.md
+!docs/RESEARCH_REPORT.md
+!docs/DECISION_RECORD.md
+!docs/PROOF.md
+!docs/research/
+docs/research/*
+!docs/research/R1_arc_circle.md
+!docs/research/R2_agents.md
+!docs/research/R3_contracts.md
+!docs/research/R4_stack.md
+app/contracts/lib/
+app/contracts/out/
+app/contracts/cache/
+app/contracts/*.tgz
+*.tgz
+node_modules/
+.env
+.env.local

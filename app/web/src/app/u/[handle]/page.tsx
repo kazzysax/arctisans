@@ -7,7 +7,8 @@ import { BadgePin } from "@/components/BadgePin";
 import { Sheet } from "@/components/ui";
 import type { Badge } from "@/lib/badges";
 import { Back, Stat } from "@/components/ui";
-import { TabBar } from "@/components/TabBar";
+import { Roll } from "@/components/fun/Roll";
+import { FollowButton } from "@/components/fun/FollowButton";
 import { TipSheet } from "@/components/TipSheet";
 import { SocialIcon } from "@/components/Social";
 import { Verified } from "@/components/Verified";
@@ -21,7 +22,6 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const p = people[handle];
   const sp = useSearchParams();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Work");
-  const [following, setFollowing] = useState(false);
   const [tip, setTip] = useState(false);
   const [card, setCard] = useState(false);
   const [badge, setBadge] = useState<Badge | null>(null);
@@ -34,7 +34,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const earned = badges.filter((b) => b.earned);
 
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[480px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
       {/* cover: photo fading into the page, back + edit/more on glass */}
       <div className="relative h-[250px] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -60,7 +60,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           {!mine && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
               <button onClick={() => setTip(true)} aria-label="Tip" className="press grid h-10 w-10 place-items-center rounded-full hairline-strong"><Coin size={18} /></button>
-              <button onClick={() => setFollowing(!following)} className={`press h-10 rounded-full px-4 text-[13px] font-medium transition-colors ${following ? "hairline-strong" : "bg-pill text-pill-fg"}`}>{following ? "Following" : "Follow"}</button>
+              <FollowButton />
             </div>
           )}
         </div>
@@ -83,10 +83,10 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             <span className="flex items-center gap-1.5 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--img-bg)] ring-1 ring-line-strong" />{level.name}{level.upfrontPct > 0 && <span className="text-faint">· {level.upfrontPct}% upfront</span>}</span>
           </div>
           <div className="grid grid-cols-4 gap-2 p-4">
-            <Stat value={p.jobs} label="Paid jobs" />
+            <Stat value={<Roll value={p.jobs} />} label="Paid jobs" />
             <Stat value={<>{avg}<span className="text-[14px] text-faint">★</span></>} label="Rating" />
             <Stat value={`${f.onTime}%`} label="On time" />
-            <Stat value={`$${(f.earned / 1000).toFixed(1)}k`} label="Earned" />
+            <Stat value={<Roll value={f.earned} prefix="$" />} label="Earned" />
           </div>
           {earned.length > 0 && (
             <div className="flex items-center gap-2 border-t border-line px-4 py-3">
@@ -249,7 +249,6 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
       </Sheet>
 
       <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} />
-      <TabBar />
     </div>
   );
 }

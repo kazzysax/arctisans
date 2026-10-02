@@ -5,6 +5,7 @@
 /* Arctisans: monochrome frame. Colour comes only from people's photos and the light-blue backgrounds. */
 :root {
   --img-bg: #cfe3f3;
+  --stamp: #2f6ea6;
   --bg: #f6f6f4;
   --bg-2: #ffffff;
   --fg: #0a0a0a;
@@ -20,6 +21,7 @@
 }
 .dark {
   --img-bg: #bcd6ec;
+  --stamp: #a9cdee;
   --bg: #000000;
   --bg-2: #0b0b0b;
   --fg: #ffffff;
@@ -101,3 +103,52 @@ textarea.field { height:auto; padding:14px 16px; line-height:1.5; resize:none; }
 @keyframes fade { from { opacity:0 } to { opacity:1 } }
 @keyframes orbit { to { transform: rotate(360deg); } }
 @keyframes counter { to { transform: rotate(-360deg); } }
+
+/* ---------- Fun, but premium: one accent (light blue), all meaning carried by motion ---------- */
+:root { --spring: cubic-bezier(.3, 1.45, .5, 1); --ease-out: cubic-bezier(.2, .8, .2, 1); }
+
+/* view transitions: shared-element morph (card -> post, avatar -> profile) */
+::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out); }
+::view-transition-image-pair(.morph) { animation-name: via-blur; }
+@keyframes via-blur { 30% { filter: blur(3px); } }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 260ms; }
+
+/* rolling numbers */
+.roll-col { display: inline-flex; flex-direction: column; transition: transform 900ms var(--ease-out); will-change: transform; }
+
+/* like burst: the Arctisans arc pops instead of a generic heart */
+@keyframes arcPop { 0% { opacity: 0; transform: scale(.2) rotate(-20deg); } 35% { opacity: 1; transform: scale(1.18) rotate(0); } 60% { transform: scale(.96); } 100% { opacity: 0; transform: scale(1.02) translateY(-14px); } }
+@keyframes spark { 0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(.4); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-58px) scale(1); } }
+
+/* follow -> check -> following */
+@keyframes pop { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+/* tip: coin flips down into the avatar */
+@keyframes coinDrop { 0% { transform: translateY(-150px) rotateY(0) scale(1); opacity: 0; } 15% { opacity: 1; } 75% { transform: translateY(6px) rotateY(900deg) scale(.8); opacity: 1; } 100% { transform: translateY(12px) rotateY(1080deg) scale(.3); opacity: 0; } }
+@keyframes ringOut { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--img-bg) 90%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
+
+/* PAID stamp */
+@keyframes stamp { 0% { opacity: 0; transform: scale(2.6) rotate(-16deg); } 55% { opacity: 1; transform: scale(.93) rotate(-9deg); } 75% { transform: scale(1.03) rotate(-9deg); } 100% { opacity: 1; transform: scale(1) rotate(-9deg); } }
+@keyframes thud { 0%, 100% { transform: none; } 30% { transform: translateY(3px) scale(.995); } 60% { transform: translateY(-1px); } }
+
+/* "just got paid" ring in stories */
+@keyframes spin { to { transform: rotate(360deg); } }
+.paid-ring { background: conic-gradient(from 0deg, var(--img-bg), transparent 30%, transparent 55%, var(--img-bg) 80%, var(--img-bg)); animation: spin 5s linear infinite; }
+
+/* pull to refresh: arc draws, dot drops */
+@keyframes dotDrop { 0% { transform: translateY(-14px); opacity: 0; } 60% { transform: translateY(2px); opacity: 1; } 100% { transform: none; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.skeleton { background: linear-gradient(90deg, var(--line) 25%, var(--line-strong) 37%, var(--line) 63%); background-size: 200% 100%; animation: shimmer 1.4s ease infinite; }
+
+@keyframes sealIn { 0% { transform: scale(.4) rotate(-30deg); opacity: 0; } 60% { transform: scale(1.12) rotate(4deg); opacity: 1; } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
+
+/* laptop shell: fixed bars and centred columns respect the rail and the right panel */
+:root { --rail: 0px; --aside: 0px; }
+@media (min-width: 1024px) { .has-rail { --rail: 248px; } }
+@media (min-width: 1280px) { .has-aside { --aside: 340px; } }
+.sheet-panel { animation: sheet 380ms var(--ease-out) both; }
+@media (min-width: 1024px) { .sheet-panel { animation: rise 380ms var(--ease-out) both; } }

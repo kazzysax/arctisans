@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Cormorant_Garamond } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
+import { AppShell } from "@/components/shell/AppShell";
+import { Aside } from "@/components/shell/Aside";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const serif = Cormorant_Garamond({ variable: "--font-serif", subsets: ["latin"], weight: ["400", "500", "600"] });
@@ -17,7 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${serif.variable} h-full`}>
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          {children}
+          <AppShell aside={<Aside />}>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

@@ -28,6 +28,8 @@ export const following: Post[] = [
 ];
 
 export const stories = ["amara", "tobi", "lena", "atlas", "noor", "sami", "kai", "ivy"];
+export const paidToday = ["lena", "atlas"]; // finished a paid job today (from JobClosed events)
+export const postById = (id: string) => [...discover, ...following].find((p) => p.id === id);
 
 export type Profile = {
   bio: string; scope: string[]; skills: { name: string; jobs: number }[];
@@ -78,6 +80,7 @@ export const jobs: Job[] = [
   { id: "1042", title: "Bakery brand identity", client: "amara", artisan: "lena", total: 60, split: "30% on start (Trusted) · 70% on approval", state: "Delivered", deadline: "Oct 18", revisions: "1 of 2 used", released: 18, next: "Review the delivery" },
   { id: "1039", title: "Ankara two-piece set", client: "kai", artisan: "amara", total: 85, split: "50% on start (Pro) · 50% on approval", state: "Active", deadline: "Oct 21", revisions: "0 of 1 used", released: 42.5, next: "Waiting for delivery" },
   { id: "1033", title: "Market brief: Lagos fintech", client: "eli", artisan: "atlas", total: 25, split: "100% on approval", state: "Completed", deadline: "Oct 9", revisions: "0 of 1 used", released: 25, next: "Leave a review" },
+  { id: "1051", title: "Shop sign hand-lettering", client: "ivy", artisan: "amara", total: 50, split: "100% on approval", state: "Settlement", deadline: "Oct 16", revisions: "2 of 2 used", released: 0, next: "Answer the split offer" },
   { id: "1048", title: "Wedding invitation lettering", client: "sami", artisan: "amara", total: 40, split: "3 milestones", state: "Proposed", deadline: "Oct 30", revisions: "2 included", released: 0, next: "Accept terms" },
 ];
 

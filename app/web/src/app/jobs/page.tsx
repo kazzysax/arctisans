@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { jobs, people } from "@/lib/demo";
-import { TabBar } from "@/components/TabBar";
 import { StateTag } from "@/components/JobState";
+import { Empty } from "@/components/fun/Empty";
+import { Roll } from "@/components/fun/Roll";
 import { Stat } from "@/components/ui";
 
 const ME = "amara";
@@ -15,7 +16,7 @@ export default function Jobs() {
     f === "All" ? true : f === "Done" ? j.state === "Completed" : f === "Hiring" ? j.client === ME && j.state !== "Completed" : j.artisan === ME && j.state !== "Completed");
   const escrow = jobs.filter((j) => j.state !== "Completed").reduce((a, j) => a + j.total - j.released, 0);
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[480px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
       <header className="px-5 pt-[max(18px,env(safe-area-inset-top))]">
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">Jobs</h1>
         <p className="mt-1 text-[14px] text-muted">Agreements, invoices and payments.</p>
@@ -29,7 +30,7 @@ export default function Jobs() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/10" />
           <div className="relative text-white">
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">Wallet · USDC on Arc</div>
-            <div className="num mt-2 text-[38px] font-semibold leading-none">$1,284.50</div>
+            <div className="mt-2 text-[38px] font-semibold leading-none"><Roll value={1284.5} prefix="$" decimals={2} /></div>
             <div className="mt-4 flex gap-2">
               <button className="press h-9 rounded-full bg-white px-4 text-[13px] font-medium text-black">Add funds</button>
               <button className="press h-9 rounded-full border border-white/30 px-4 text-[13px] text-white backdrop-blur">Withdraw</button>
@@ -48,6 +49,7 @@ export default function Jobs() {
       </div>
 
       <div className="mt-3 px-5">
+        {list.length === 0 && <Empty art="thread" title="Nothing here yet" body="Jobs in this state will show up here." action={{ href: "/search", label: "Find a request" }} />}
         {list.map((j, i) => {
           const other = people[j.client === ME ? j.artisan : j.client] ?? people[j.artisan];
           const pct = (j.released / j.total) * 100;
@@ -71,7 +73,6 @@ export default function Jobs() {
           );
         })}
       </div>
-      <TabBar />
     </div>
   );
 }

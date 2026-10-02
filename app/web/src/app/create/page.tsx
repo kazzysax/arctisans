@@ -20,7 +20,7 @@ export default function Create() {
   const sample = ["/demo/work_ankara.jpg", "/demo/work_fashion.jpg", "/demo/work_tailor.jpg"];
 
   if (!mode) return (
-    <main className="mx-auto min-h-dvh max-w-[480px]">
+    <main className="mx-auto min-h-dvh max-w-[560px]">
       <TopBar back="/social" title="Create" />
       <div className="flex flex-col gap-3 px-5 pt-3">
         {CHOICES.map((c, i) => {
@@ -39,7 +39,7 @@ export default function Create() {
   );
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[480px] pb-32">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-32">
       <TopBar title={mode === "work" ? "Post work" : "Post a request"} right={<button onClick={() => setMode(null)} className="text-[13px] text-muted">Cancel</button>} />
       <div className="rise flex flex-col gap-6 px-5 pt-2">
         {mode === "work" ? (<>
@@ -66,7 +66,7 @@ export default function Create() {
             <div className="flex gap-2"><span className="chip" data-on="true">People</span><span className="chip" data-on="true">Agents</span></div></div>
         </>)}
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8">
+      <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8">
         <button disabled={mode === "work" && pics.length === 0} onClick={() => r.push("/social")} className="btn btn-solid w-full max-w-[440px]">{mode === "work" ? "Share" : "Post request"}</button>
       </div>
     </main>

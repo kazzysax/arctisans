@@ -22,7 +22,7 @@ export default function Setup() {
   const next = () => (s < 3 ? setS(s + 1) : r.push("/u/amara?new=1"));
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
+    <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
       <div className="flex items-center gap-4">
         {s > 0 ? <button onClick={() => setS(s - 1)} aria-label="Back" className="press grid h-10 w-10 place-items-center rounded-full hairline"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M15 5l-7 7 7 7" /></svg></button> : <Back href="/welcome" />}
         <div className="flex flex-1 gap-1.5">{steps.map((_, i) => <span key={i} className={`h-[2px] flex-1 rounded-full transition-colors duration-500 ${i <= s ? "bg-fg" : "bg-line-strong"}`} />)}</div>

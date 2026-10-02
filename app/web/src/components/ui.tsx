@@ -30,9 +30,9 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:pl-[var(--rail)] lg:pr-[var(--aside)]">
       <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" style={{ animation: "fade 220ms both" }} />
-      <div role="dialog" aria-modal className="relative w-full max-w-[480px] rounded-t-[32px] border border-line bg-bg-2 px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3" style={{ animation: "sheet 380ms cubic-bezier(.2,.8,.2,1) both" }}>
+      <div role="dialog" aria-modal className="sheet-panel relative max-h-[92dvh] w-full max-w-[480px] overflow-y-auto rounded-t-[32px] border border-line bg-bg-2 px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 lg:rounded-[32px] lg:pb-6">
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong" />
         {title && <h3 className="mb-4 text-[19px] font-medium tracking-[-0.02em]">{title}</h3>}
         {children}

@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { LogoTile } from "@/components/Logo";
 import { people } from "@/lib/demo";
 
@@ -11,9 +13,18 @@ const ring = (n: number, r: number, offset: number) => Array.from({ length: n },
 export default function Welcome() {
   const ps = Object.values(people);
   const inner = ring(4, 104, 0.5), outer = ring(6, 170, 0.15);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    // the orbit leans gently toward the pointer / with the phone's tilt
+    const m = (e: PointerEvent) => setTilt({ x: (e.clientX / innerWidth - 0.5) * 2, y: (e.clientY / innerHeight - 0.5) * 2 });
+    const o = (e: DeviceOrientationEvent) => setTilt({ x: Math.max(-1, Math.min(1, (e.gamma ?? 0) / 25)), y: Math.max(-1, Math.min(1, ((e.beta ?? 45) - 45) / 25)) });
+    addEventListener("pointermove", m); addEventListener("deviceorientation", o);
+    return () => { removeEventListener("pointermove", m); removeEventListener("deviceorientation", o); };
+  }, []);
   return (
     <main className="relative mx-auto flex min-h-dvh max-w-[480px] flex-col overflow-hidden bg-black px-6 pb-[max(28px,env(safe-area-inset-bottom))] pt-[max(22px,env(safe-area-inset-top))] text-white">
-      <div className="relative mx-auto mt-[6vh] h-[380px] w-[380px] max-w-full">
+      <div className="relative mx-auto mt-[6vh] h-[380px] w-[380px] max-w-full" style={{ perspective: 900 }}>
+        <div className="absolute inset-0" style={{ transform: `rotateX(${-tilt.y * 9}deg) rotateY(${tilt.x * 11}deg)`, transition: "transform 900ms var(--ease-out)", transformStyle: "preserve-3d" }}>
         <div className="absolute left-1/2 top-1/2 h-[208px] w-[208px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.09]" />
         <div className="absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.07]" />
         <div className="absolute inset-0" style={{ animation: "orbit 90s linear infinite" }}>
@@ -24,7 +35,8 @@ export default function Welcome() {
             </div>
           ))}
         </div>
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rise"><LogoTile size={78} /></div>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rise" style={{ transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))` }}><LogoTile size={78} /></div>
+        </div>
       </div>
 
       <div className="flex-1" />

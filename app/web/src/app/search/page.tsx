@@ -2,24 +2,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { people, discover } from "@/lib/demo";
-import { TabBar } from "@/components/TabBar";
 import { Search as SearchIcon } from "@/components/icons";
 import { Verified } from "@/components/Verified";
+import { REQUESTS } from "@/lib/requests";
+import { Empty } from "@/components/fun/Empty";
 
 const CATS = ["All", "Fashion", "Design", "Writing", "Build", "Agents"];
-const REQUESTS = [
-  { by: "ivy", t: "Logo for a bakery in Ibadan", d: "2 concepts, 1 revision. Must work on bags and a sign.", b: 40, due: "10 days", n: 6 },
-  { by: "eli", t: "Translate a 900-word landing page to French", d: "Natural tone, not literal. Agents welcome.", b: 18, due: "2 days", n: 11 },
-  { by: "tobi", t: "3D render of a two-bed bungalow", d: "From existing floor plan. 3 angles.", b: 75, due: "1 week", n: 3 },
-];
-
 export default function Search() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [view, setView] = useState<"Requests" | "People">("Requests");
   const ps = Object.values(people).filter((p) => (cat === "Agents" ? p.kind === "agent" : true) && (p.name + p.title).toLowerCase().includes(q.toLowerCase()));
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[480px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
       <header className="sticky top-0 z-30 bg-[var(--bg)]/85 px-5 pb-3 pt-[max(18px,env(safe-area-inset-top))] backdrop-blur-xl">
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">Search</h1>
         <div className="relative mt-4"><SearchIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-faint" />
@@ -34,24 +29,25 @@ export default function Search() {
       </div>
 
       <div key={view} className="rise px-5" style={{ animationDuration: "420ms" }}>
-        {view === "Requests" ? REQUESTS.map((r, i) => {
+        {view === "Requests" ? REQUESTS.filter((r) => (r.title + r.skill).toLowerCase().includes(q.toLowerCase())).map((r, i) => {
           const p = people[r.by];
           return (
-            <article key={i} className={`py-5 ${i ? "border-t border-line" : ""}`}>
+            <Link href={`/requests/${r.id}`} key={r.id} className={`press block py-5 ${i ? "border-t border-line" : ""}`}>
               <div className="flex items-center gap-2.5 text-[12.5px] text-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.avatar} alt="" className="h-6 w-6 rounded-[8px] object-cover" />{p.name}<span className="text-faint">· {r.n} applied</span>
+                <img src={p.avatar} alt="" className="h-6 w-6 rounded-[8px] object-cover" />{p.name}<span className="text-faint">· {r.applicants.length} applied</span>
               </div>
-              <h3 className="mt-3 text-[17px] font-medium leading-snug tracking-[-0.02em]">{r.t}</h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{r.d}</p>
+              <h3 className="mt-3 text-[17px] font-medium leading-snug tracking-[-0.02em]">{r.title}</h3>
+              <p className="mt-1.5 line-clamp-2 text-[14px] leading-relaxed text-muted">{r.body}</p>
               <div className="mt-4 flex items-center gap-3">
-                <span className="num text-[18px] font-medium">${r.b}</span><span className="text-[12.5px] text-faint">· {r.due}</span>
-                <span className="flex-1" /><button className="btn btn-solid btn-sm">Apply</button>
+                <span className="num text-[18px] font-medium">${r.budget}</span><span className="text-[12.5px] text-faint">· {r.due}</span>
+                <span className="flex-1" /><span className="btn btn-solid btn-sm">View</span>
               </div>
-            </article>
+            </Link>
           );
         }) : (
           <div className="flex flex-col">
+            {ps.length === 0 && <Empty art="search" title="Nobody by that name yet" body="Try a skill instead, like “tailor” or “logo”." />}
             {ps.map((p, i) => {
               const thumb = discover.find((d) => d.by === p.handle)?.photos[0];
               return (
@@ -70,7 +66,6 @@ export default function Search() {
           </div>
         )}
       </div>
-      <TabBar />
     </div>
   );
 }

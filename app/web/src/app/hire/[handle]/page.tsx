@@ -40,7 +40,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   const schedule = plan === "upfront" ? [[`When work starts (${level.upfrontPct}%)`, up], ["When you approve", t - up]] : plan === "full" ? [["When you approve", t]] : ms.map((m, i) => [`Milestone ${i + 1} approved`, Number(m) || 0]);
 
   if (step === 2) return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-6 text-center">
+    <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col items-center justify-center px-6 text-center">
       <div className="rise grid h-16 w-16 place-items-center rounded-full bg-fg text-[var(--bg)]"><Check size={28} /></div>
       <h1 className="rise mt-6 text-[26px] font-semibold tracking-[-0.035em]" style={{ animationDelay: "80ms" }}>Agreement sent</h1>
       <p className="rise mt-2 max-w-[300px] text-[14px] leading-relaxed text-muted" style={{ animationDelay: "140ms" }}>When {p.name.split(" ")[0]} accepts, you&apos;ll fund ${t.toFixed(2)} into escrow. Nothing leaves your wallet until then.</p>
@@ -50,7 +50,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   );
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[480px] pb-32">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-32">
       <TopBar back={step ? undefined : `/u/${handle}`} title={step ? "Review agreement" : "New agreement"} />
       {step === 1 && <button onClick={() => setStep(0)} className="absolute left-5 top-[max(16px,env(safe-area-inset-top))] z-40 h-10 w-10" aria-label="Back" />}
 
@@ -153,7 +153,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8">
+      <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8">
         <div className="w-full max-w-[440px]">
           {step === 0
             ? <button disabled={over || under || !msOk || !title.trim()} onClick={() => setStep(1)} className="btn btn-solid w-full">Review · ${t.toFixed(2)}</button>

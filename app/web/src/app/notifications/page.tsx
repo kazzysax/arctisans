@@ -5,14 +5,14 @@ import { TopBar } from "@/components/ui";
 const GLYPH: Record<string, string> = { tip: "$", paid: "◎", review: "★", follow: "+", released: "↗" };
 export default function Notifications() {
   return (
-    <main className="mx-auto min-h-dvh max-w-[480px] pb-10">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-10">
       <TopBar back="/social" title="Activity" />
       <div className="px-5">
         <div className="label mt-2">Today</div>
         {notifications.map((n, i) => {
           const p = people[n.who];
           return (
-            <Link key={i} href={n.kind === "follow" ? `/u/${n.who}` : "/jobs"} className={`rise press flex items-center gap-3 py-3.5 ${i ? "border-t border-line" : ""}`} style={{ animationDelay: `${i * 50}ms` }}>
+            <Link key={i} href={n.kind === "follow" ? `/u/${n.who}` : n.kind === "review" || n.kind === "released" || n.kind === "paid" ? "/jobs/1033" : "/jobs"} className={`rise press flex items-center gap-3 py-3.5 ${i ? "border-t border-line" : ""}`} style={{ animationDelay: `${i * 50}ms` }}>
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.avatar} alt="" className="h-11 w-11 rounded-[14px] object-cover" />

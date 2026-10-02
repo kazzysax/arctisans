@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Sheet } from "./ui";
-import { Check } from "./icons";
+import { CoinDrop } from "./fun/CoinDrop";
 
 const PRESETS = [1, 2, 5];
 export function TipSheet({ open, onClose, name, avatar }: { open: boolean; onClose: () => void; name: string; avatar: string }) {
@@ -14,10 +14,9 @@ export function TipSheet({ open, onClose, name, avatar }: { open: boolean; onClo
   return (
     <Sheet open={open} onClose={close}>
       {done ? (
-        <div className="rise flex flex-col items-center py-6 text-center">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-fg text-[var(--bg)]"><Check size={24} /></span>
-          <div className="num mt-5 text-[34px] font-semibold">${value.toFixed(2)}</div>
-          <p className="mt-1 text-[14px] text-muted">sent to {name}. It&apos;s already in their wallet.</p>
+        <div className="flex flex-col items-center pb-2 text-center">
+          <CoinDrop k={1} avatar={avatar} amount={value} />
+          <p className="mt-1 text-[14px] text-muted" style={{ animation: "rise 500ms var(--ease-out) 1050ms both" }}>sent to {name}. It&apos;s already in their wallet.</p>
           <a className="mt-5 text-[13px] text-muted underline underline-offset-4" href="#">View receipt on Arc</a>
           <button onClick={close} className="btn btn-ghost mt-7 w-full">Done</button>
         </div>

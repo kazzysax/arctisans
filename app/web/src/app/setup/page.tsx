@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Back } from "@/components/ui";
 import { Check, Plus } from "@/components/icons";
@@ -11,15 +11,90 @@ const KINDS = [
 ] as const;
 const SKILLS = ["Tailoring", "Fashion", "Branding", "Logo design", "Illustration", "Writing", "Copywriting", "Translation", "Architecture", "3D models", "Photography", "Web development", "Smart contracts", "Research", "Jewellery", "Crafts"];
 const LINKS = [["LinkedIn", "linkedin.com/in/…"], ["X", "x.com/…"], ["Instagram", "instagram.com/…"], ["TikTok", "tiktok.com/@…"], ["GitHub", "github.com/…"], ["Portfolio", "yoursite.com"]] as const;
+const LINK_KEYS = ["linkedin", "x", "instagram", "tiktok", "github", "web"] as const;
 
 export default function Setup() {
   const r = useRouter();
   const [s, setS] = useState(0);
   const [kind, setKind] = useState<"human" | "agent">("human");
-  const [skills, setSkills] = useState<string[]>(["Tailoring"]);
-  const [scope, setScope] = useState<string[]>(["Made-to-measure dresses and suits", ""]);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [scope, setScope] = useState<string[]>(["", ""]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Step 1 fields
+  const nameRef = useRef<HTMLInputElement>(null);
+  const handleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Step 3 link refs
+  const linkRefs = useRef<(HTMLInputElement | null)[]>([]);
   const steps = ["You", "Profile", "Skills", "Links"];
-  const next = () => (s < 3 ? setS(s + 1) : r.push("/u/amara?new=1"));
+
+  function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    setAvatarPreview(url);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const linkValues = linkRefs.current.map((ref, i) => {
+        const val = ref?.value.trim() ?? "";
+        if (!val) return null;
+        const url = val.startsWith("http") ? val : `https://${val}`;
+        return { label: LINKS[i][0], url };
+      }).filter(Boolean) as { label: string; url: string }[];
+
+      const body = {
+        handle: (handleRef.current?.value ?? "").trim(),
+        displayName: (nameRef.current?.value ?? "").trim(),
+        kind,
+        title: (titleRef.current?.value ?? "").trim() || undefined,
+        city: (cityRef.current?.value ?? "").trim() || undefined,
+        bio: (bioRef.current?.value ?? "").trim() || undefined,
+        scope: scope.filter((x) => x.trim()).join("\n") || undefined,
+        skills: skills.map((x) => x.toLowerCase()),
+        links: linkValues,
+      };
+
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? "Could not save profile");
+      }
+
+      const profile = await res.json();
+      const handle = (profile as { handle?: string }).handle ?? body.handle;
+
+      // Upload avatar if selected
+      if (avatarRef.current?.files?.[0]) {
+        const form = new FormData();
+        form.append("file", avatarRef.current.files[0]);
+        await fetch("/api/img/avatar", { method: "POST", credentials: "include", body: form }).catch(() => null);
+      }
+
+      r.push(`/u/${handle}?new=1`);
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  }
+
+  const next = () => (s < 3 ? setS(s + 1) : save());
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
@@ -49,16 +124,22 @@ export default function Setup() {
         {s === 1 && (<>
           <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.035em]">Your CV, the top part</h1>
           <div className="mt-7 flex items-center gap-4">
-            <button className="press grid h-[84px] w-[84px] place-items-center rounded-[26px] border border-dashed border-line-strong text-muted" aria-label="Add photo"><Plus size={22} /></button>
+            <button onClick={() => avatarRef.current?.click()} className="press relative grid h-[84px] w-[84px] place-items-center overflow-hidden rounded-[26px] border border-dashed border-line-strong text-muted" aria-label="Add photo">
+              {avatarPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+              ) : <Plus size={22} />}
+            </button>
+            <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
             <div className="text-[13px] leading-relaxed text-muted">Add a clear photo of you<br />{kind === "agent" ? "or your agent's mark" : "or your brand"}. Square works best.</div>
           </div>
           <div className="mt-6 flex flex-col gap-4">
-            <label className="flex flex-col gap-2"><span className="label">Name</span><input className="field" defaultValue="Amara Okafor" /></label>
+            <label className="flex flex-col gap-2"><span className="label">Name</span><input ref={nameRef} className="field" placeholder="Your full name" /></label>
             <label className="flex flex-col gap-2"><span className="label">Handle</span>
-              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint">@</span><input className="field pl-8" defaultValue="amara" /></div></label>
-            <label className="flex flex-col gap-2"><span className="label">What you do</span><input className="field" defaultValue="Tailor" placeholder="e.g. Brand designer" /></label>
-            <label className="flex flex-col gap-2"><span className="label">City</span><input className="field" defaultValue="Lagos" placeholder="City or Remote" /></label>
-            <label className="flex flex-col gap-2"><span className="label">Bio</span><textarea rows={3} maxLength={600} className="field" defaultValue="Made-to-measure tailoring in Lagos. Ankara, aso-oke and clean modern cuts." /></label>
+              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint">@</span><input ref={handleRef} className="field pl-8" placeholder="yourhandle" /></div></label>
+            <label className="flex flex-col gap-2"><span className="label">What you do</span><input ref={titleRef} className="field" placeholder="e.g. Brand designer" /></label>
+            <label className="flex flex-col gap-2"><span className="label">City</span><input ref={cityRef} className="field" placeholder="City or Remote" /></label>
+            <label className="flex flex-col gap-2"><span className="label">Bio</span><textarea ref={bioRef} rows={3} maxLength={600} className="field" placeholder="A short intro about your work and approach." /></label>
           </div>
         </>)}
 
@@ -84,14 +165,16 @@ export default function Setup() {
             {LINKS.map(([k, ph], i) => (
               <label key={k} className={`flex items-center gap-3 bg-bg-2 px-4 ${i ? "border-t border-line" : ""}`}>
                 <span className="w-[84px] shrink-0 text-[13px] text-muted">{k}</span>
-                <input className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint" placeholder={ph} />
+                <input ref={(el) => { linkRefs.current[i] = el; }} className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint" placeholder={ph} />
               </label>
             ))}
           </div>
         </>)}
+
+        {error && <p className="mt-4 rounded-[14px] bg-red-100 px-4 py-3 text-[13px] text-red-700 dark:bg-red-900/30 dark:text-red-300">{error}</p>}
       </div>
 
-      <button onClick={next} className="btn btn-solid mt-8 w-full">{s < 3 ? "Continue" : "Create my CV"}</button>
+      <button onClick={next} disabled={saving} className="btn btn-solid mt-8 w-full disabled:opacity-50">{saving ? "Saving…" : s < 3 ? "Continue" : "Create my CV"}</button>
     </main>
   );
 }

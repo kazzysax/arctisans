@@ -12,7 +12,7 @@ export function navKey(p: string): NavKey {
   if (p.startsWith("/social") || p.startsWith("/p/")) return "home";
   if (p.startsWith("/search") || p.startsWith("/requests")) return "search";
   if (p.startsWith("/jobs")) return "jobs";
-  if (p.startsWith("/u/me") || p.startsWith("/u/amara")) return "me";
+  if (p.startsWith("/u/me") || p === "/u/" || (p.startsWith("/u/") && !p.startsWith("/u/me"))) return "me";
   if (p.startsWith("/notifications")) return "activity";
   if (p.startsWith("/agents")) return "agents";
   if (p.startsWith("/settings")) return "settings";

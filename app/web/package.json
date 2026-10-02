@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@circle-fin/w3s-pw-web-sdk": "^1.1.11",
     "@libsql/client": "^0.18.0",
     "lucide-react": "^1.49.0",
     "motion": "^13.5.0",

@@ -1,14 +1,47 @@
+"use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Stories } from "@/components/Stories";
 import { DiscoverCard } from "@/components/DiscoverCard";
 import { FeedPost } from "@/components/FeedPost";
 import { HScroll } from "@/components/HScroll";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Bell } from "@/components/icons";
-import { discover, following } from "@/lib/demo";
 import { PullToRefresh } from "@/components/fun/PullToRefresh";
 
-export const metadata = { title: "Arctisans · Social" };
+
+type FeedItem = {
+  id: string;
+  handle: string;
+  displayName: string;
+  kind: string;
+  verified: boolean;
+  body: string;
+  images: string[];
+  skill: string | null;
+  likes: number;
+  createdAt: number;
+};
+
+function ago(ts: number): string {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
+}
+
+function toPost(item: FeedItem) {
+  return {
+    id: item.id,
+    by: item.handle,
+    photos: item.images,
+    caption: item.body,
+    skill: item.skill ?? "",
+    likes: item.likes,
+    tips: 0,
+    ago: ago(item.createdAt),
+  };
+}
 
 function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -19,11 +52,42 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
   );
 }
 
+function Skeleton({ count = 4, horizontal = false }: { count?: number; horizontal?: boolean }) {
+  return (
+    <div className={horizontal ? "flex gap-3 overflow-hidden px-5" : "flex flex-col gap-4 px-4"}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className={`animate-pulse rounded-[22px] bg-line ${horizontal ? "h-[220px] w-[220px] shrink-0" : "h-[120px]"}`} />
+      ))}
+    </div>
+  );
+}
+
 export default function Social() {
+  const [discover, setDiscover] = useState<FeedItem[] | null>(null);
+  const [following, setFollowing] = useState<FeedItem[] | null>(null);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/posts?feed=work&limit=8", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { items?: FeedItem[] }) => setDiscover(j.items ?? []))
+      .catch(() => setDiscover([]));
+
+    fetch("/api/posts?feed=work&following=1&limit=10", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { items?: FeedItem[] }) => setFollowing(j.items ?? []))
+      .catch(() => setFollowing([]));
+
+    fetch("/api/notifications", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((j: { unread?: number } | null) => j && setUnread(j.unread ?? 0))
+      .catch(() => null);
+  }, []);
+
   return (
     <PullToRefresh>
       <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
-        {/* top glass panel: header + stories, rounded bottom like the reference */}
+        {/* top glass panel */}
         <section className="glass relative z-30 rounded-b-[34px] border-t-0 px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))]">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -34,27 +98,38 @@ export default function Social() {
               <ThemeToggle />
               <Link href="/notifications" aria-label="Notifications" className="press relative grid h-10 w-10 place-items-center rounded-full hairline text-muted">
                 <Bell size={19} />
-                <span className="absolute right-[10px] top-[9px] h-[7px] w-[7px] rounded-full bg-fg ring-2 ring-[var(--bg)]" />
+                {unread > 0 && <span className="absolute right-[10px] top-[9px] h-[7px] w-[7px] rounded-full bg-fg ring-2 ring-[var(--bg)]" />}
               </Link>
             </div>
           </div>
-          <Stories />
         </section>
 
         <div className="pt-7">
           <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Work</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Discover</SectionTitle>
-          <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
-            {discover.map((p) => <DiscoverCard key={p.id} post={p} />)}
-          </HScroll>
+          {discover === null ? (
+            <div className="mt-4"><Skeleton count={3} horizontal /></div>
+          ) : discover.length === 0 ? (
+            <p className="mt-4 px-5 text-[14px] text-muted">No work posts yet. <Link href="/create" className="text-fg underline-offset-4 hover:underline">Post yours</Link>.</p>
+          ) : (
+            <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
+              {discover.map((item) => <DiscoverCard key={item.id} post={toPost(item)} />)}
+            </HScroll>
+          )}
         </div>
 
         <div className="mx-5 mt-8 rule" />
 
         <div className="pt-7">
           <SectionTitle action={<Link href="/search" className="text-[12px] text-muted">See all</Link>}>From people you follow</SectionTitle>
-          <div className="mt-4 flex flex-col gap-4 px-4">
-            {following.map((p) => <FeedPost key={p.id} post={p} />)}
-          </div>
+          {following === null ? (
+            <div className="mt-4"><Skeleton count={2} /></div>
+          ) : following.length === 0 ? (
+            <p className="mt-4 px-5 text-[14px] text-muted">Follow some people to see their work here.</p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-4 px-4">
+              {following.map((item) => <FeedPost key={item.id} post={toPost(item)} />)}
+            </div>
+          )}
         </div>
       </div>
     </PullToRefresh>

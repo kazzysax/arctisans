@@ -1,16 +1,128 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Mark } from "@/components/Logo";
 
 // Sign-up: full-bleed dewy macro photo tinted light blue, a solid square block with spaced serif capitals (reference),
 // and the email / Google sign-in under it.
+// Auth flow:
+//  1. User enters email → we POST to Circle to send OTP (via W3S SDK)
+//  2. User enters OTP  → Circle returns userToken
+//  3. We POST userToken to /api/auth/circle → server verifies, sets session cookie
+//  4. If profile exists → /social; if not → /setup
+
+const CIRCLE_APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID ?? "";
+
+async function sendEmailOtp(email: string): Promise<void> {
+  const r = await fetch("https://api.circle.com/v1/w3s/users/email/otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ appId: CIRCLE_APP_ID, email }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { message?: string }).message ?? "Could not send code");
+  }
+}
+
+async function verifyEmailOtp(email: string, otp: string): Promise<string> {
+  const r = await fetch("https://api.circle.com/v1/w3s/users/email/otp/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ appId: CIRCLE_APP_ID, email, otp }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { message?: string }).message ?? "Invalid code");
+  }
+  const j = (await r.json()) as { data?: { userToken?: string } };
+  const userToken = j.data?.userToken;
+  if (!userToken) throw new Error("No token returned");
+  return userToken;
+}
+
+async function finishSignIn(userToken: string): Promise<{ hasProfile: boolean }> {
+  const r = await fetch("/api/auth/circle", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userToken }),
+  });
+  if (r.status === 409) {
+    // wallet exists but no profile yet
+    return { hasProfile: false };
+  }
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { error?: string }).error ?? "Sign-in failed");
+  }
+  // Check if profile already exists
+  const profileRes = await fetch("/api/profile", { credentials: "include" });
+  return { hasProfile: profileRes.ok };
+}
+
 export default function SignUp() {
   const r = useRouter();
   const [step, setStep] = useState<"start" | "code">("start");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  // If Circle SDK is not configured, fall through to demo flow
+  const hasCircle = !!CIRCLE_APP_ID;
+
+  async function handleEmailContinue() {
+    setError(null);
+    if (!hasCircle) {
+      // No Circle config: demo shortcut → setup
+      setStep("code");
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendEmailOtp(email);
+      setStep("code");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerify() {
+    const otp = code.join("");
+    setError(null);
+    if (!hasCircle) {
+      // Demo shortcut: skip auth → setup
+      r.push("/setup");
+      return;
+    }
+    setLoading(true);
+    try {
+      const userToken = await verifyEmailOtp(email, otp);
+      const { hasProfile } = await finishSignIn(userToken);
+      r.push(hasProfile ? "/social" : "/setup");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null);
+    if (!hasCircle) {
+      // Demo shortcut
+      r.push("/setup");
+      return;
+    }
+    // Circle's Google OAuth is handled by their SDK popup. We redirect to a Circle-hosted OAuth page
+    // with our appId, then Circle returns a userToken via redirect/postMessage.
+    // For now, show a message instructing the user to use email until the OAuth redirect is configured.
+    setError("Google sign-in requires the Circle App ID to be configured. Use email OTP instead.");
+  }
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-black text-white">
@@ -41,8 +153,10 @@ export default function SignUp() {
             <h1 className="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em]">Show your work.<br /><span className="text-white/55">Get hired. Get paid.</span></h1>
             <p className="mt-3 max-w-[330px] text-[14px] leading-relaxed text-white/60">For tailors, writers, designers, builders and AI agents. Every job and payment is provable on Arc.</p>
 
+            {error && <p className="mt-3 rounded-xl bg-red-900/60 px-4 py-2.5 text-[13px] text-red-200">{error}</p>}
+
             <div className="mt-7 flex flex-col gap-2.5">
-              <button onClick={() => r.push("/welcome")} className="press flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-medium text-black">
+              <button id="signin-google" onClick={handleGoogle} disabled={loading} className="press flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-white text-[15px] font-medium text-black disabled:opacity-50">
                 <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
                 Continue with Google
               </button>
@@ -50,17 +164,20 @@ export default function SignUp() {
               <label className="sr-only" htmlFor="email">Email</label>
               <input id="email" type="email" inputMode="email" autoComplete="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)}
                 className="h-[52px] rounded-full border border-white/15 bg-white/[0.07] px-5 text-[15px] text-white outline-none backdrop-blur-xl placeholder:text-white/35 focus:border-white/35" />
-              <button disabled={!valid} onClick={() => setStep("code")} className="press h-[52px] rounded-full border border-white/25 text-[15px] font-medium text-white transition-opacity disabled:opacity-35">
-                Continue with email
+              <button id="signin-email" disabled={!valid || loading} onClick={handleEmailContinue} className="press h-[52px] rounded-full border border-white/25 text-[15px] font-medium text-white transition-opacity disabled:opacity-35">
+                {loading ? "Sending…" : "Continue with email"}
               </button>
             </div>
             <p className="mt-5 text-center text-[11.5px] leading-relaxed text-white/40">No seed phrase. Your wallet is created for you.<br />By continuing you agree to the Terms.</p>
           </div>
         ) : (
           <div className="rise">
-            <button onClick={() => setStep("start")} className="mb-5 text-[13px] text-white/55">← Change email</button>
+            <button onClick={() => { setStep("start"); setCode(["","","","","",""]); setError(null); }} className="mb-5 text-[13px] text-white/55">← Change email</button>
             <h1 className="text-[28px] font-semibold tracking-[-0.035em]">Check your inbox</h1>
             <p className="mt-2 text-[14px] text-white/60">We sent a 6-digit code to <span className="text-white">{email}</span></p>
+
+            {error && <p className="mt-3 rounded-xl bg-red-900/60 px-4 py-2.5 text-[13px] text-red-200">{error}</p>}
+
             <div className="mt-7 grid grid-cols-6 gap-2">
               {code.map((c, i) => (
                 <input key={i} id={`c${i}`} aria-label={`Digit ${i + 1}`} inputMode="numeric" maxLength={1} value={c}
@@ -73,8 +190,10 @@ export default function SignUp() {
                   className="num h-[58px] rounded-[16px] border border-white/15 bg-white/[0.07] text-center text-[22px] font-medium text-white outline-none backdrop-blur-xl focus:border-white/40" />
               ))}
             </div>
-            <button disabled={code.join("").length < 6} onClick={() => r.push("/welcome")} className="press mt-6 h-[52px] w-full rounded-full bg-white text-[15px] font-medium text-black disabled:opacity-35">Verify</button>
-            <p className="mt-4 text-center text-[12px] text-white/40">Didn&apos;t get it? <button className="text-white/70 underline-offset-4 hover:underline">Resend</button></p>
+            <button id="verify-otp" disabled={code.join("").length < 6 || loading} onClick={handleVerify} className="press mt-6 h-[52px] w-full rounded-full bg-white text-[15px] font-medium text-black disabled:opacity-35">
+              {loading ? "Verifying…" : "Verify"}
+            </button>
+            <p className="mt-4 text-center text-[12px] text-white/40">Didn&apos;t get it? <button onClick={handleEmailContinue} className="text-white/70 underline-offset-4 hover:underline">Resend</button></p>
           </div>
         )}
       </div>

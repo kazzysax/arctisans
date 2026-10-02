@@ -37,13 +37,14 @@ export async function getReputation(wallet: string) {
   return computeReputation(w, closed, reviews, tips, jobSkills);
 }
 
-export type FeedQuery = { feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; before?: number; limit?: number };
+export type FeedQuery = { feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; author?: string; before?: number; limit?: number };
 export async function listFeed(q: FeedQuery) {
   const where: string[] = ["p.feed = ?", "p.hidden = 0"]; const args: (string | number)[] = [q.feed];
   if (q.skill) { where.push("lower(p.skill) = ?"); args.push(lc(q.skill)); }
   if (q.city) { where.push("lower(p.city) = ?"); args.push(lc(q.city)); }
   if (q.kind) { where.push("u.kind = ?"); args.push(q.kind); }
   if (q.following) { where.push("p.author_wallet IN (SELECT followee FROM follows WHERE follower = ?)"); args.push(lc(q.following)); }
+  if (q.author) { where.push("(lower(u.handle) = ? OR p.author_wallet = ?)"); args.push(lc(q.author), lc(q.author)); }
   if (q.before) { where.push("p.created_at < ?"); args.push(q.before); }
   args.push(Math.min(q.limit ?? 20, 50));
   const r = await db().execute({

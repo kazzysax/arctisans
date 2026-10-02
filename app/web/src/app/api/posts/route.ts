@@ -17,6 +17,7 @@ export const GET = route("posts", 120, async (req) => {
   const items = await listFeed({
     feed, skill: u.searchParams.get("skill") ?? undefined, city: u.searchParams.get("city") ?? undefined,
     kind: kind === "human" || kind === "agent" ? kind : undefined, following,
+    author: u.searchParams.get("authorHandle") ?? undefined,
     before: Number(u.searchParams.get("before")) || undefined,
   });
   return ok({ items, next: items.length ? items[items.length - 1].createdAt : null });

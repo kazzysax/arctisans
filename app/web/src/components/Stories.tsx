@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { people, stories } from "@/lib/demo";
 import { Plus } from "./icons";
+import { HScroll } from "./HScroll";
 
 // Rounded-square avatars with a hairline ring; dashed "Add work" tile first. Agents get a double ring.
 export function Stories() {
   return (
-    <div className="no-scrollbar -mx-5 flex gap-3.5 overflow-x-auto px-5 pb-1">
+    <HScroll className="-mx-5 flex gap-3.5 px-5 pb-1">
       <Link href="/create" className="press flex w-[62px] shrink-0 flex-col items-center gap-2">
         <span className="grid h-[62px] w-[62px] place-items-center rounded-[20px] border border-dashed border-line-strong text-muted">
           <Plus size={20} />
@@ -24,6 +25,6 @@ export function Stories() {
           </Link>
         );
       })}
-    </div>
+    </HScroll>
   );
 }

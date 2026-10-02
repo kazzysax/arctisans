@@ -28,7 +28,7 @@ export function FeedPost({ post }: { post: Post }) {
 
       <div className="relative mx-3.5 aspect-[4/5] overflow-hidden rounded-[20px] bg-bg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
         {n > 1 && (
           <>
             <button aria-label="Previous picture" className="absolute inset-y-0 left-0 w-1/3" onClick={() => setI((i - 1 + n) % n)} />

@@ -13,7 +13,7 @@ export function DiscoverCard({ post }: { post: Post }) {
   return (
     <article className="relative h-[460px] w-[300px] shrink-0 snap-start overflow-hidden rounded-[30px] hairline-strong bg-bg-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-cover" />
+      <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
       {n > 1 && (
         <>
           <button aria-label="Previous picture" className="absolute inset-y-0 left-0 z-10 w-1/3" onClick={() => setI((i - 1 + n) % n)} />

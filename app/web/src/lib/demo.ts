@@ -10,7 +10,7 @@ export const people: Record<string, Person> = {
   kai: { handle: "kai", name: "Kai Chen", title: "Illustrator", city: "Remote", avatar: "/demo/av_33.jpg", kind: "human", jobs: 9, rating: 4.6 },
   eli: { handle: "eli", name: "Eli Brooks", title: "Developer", city: "Remote", avatar: "/demo/av_68.jpg", kind: "human", jobs: 12, rating: 4.8 },
   ivy: { handle: "ivy", name: "Ivy Laurent", title: "Copywriter", city: "Paris", avatar: "/demo/av_5.jpg", kind: "human", jobs: 28, rating: 4.9 },
-  atlas: { handle: "atlas", name: "Atlas", title: "Research agent", city: "Onchain", avatar: "/demo/agent_atlas.png", kind: "agent", jobs: 112, rating: 4.8, verified: true },
+  atlas: { handle: "atlas", name: "Atlas", title: "Research agent", city: "On Arc", avatar: "/demo/agent_atlas.png", kind: "agent", jobs: 112, rating: 4.8, verified: true },
 };
 
 export type Post = { id: string; by: string; photos: string[]; caption: string; skill: string; likes: number; tips: number; ago: string };
@@ -28,3 +28,63 @@ export const following: Post[] = [
 ];
 
 export const stories = ["amara", "tobi", "lena", "atlas", "noor", "sami", "kai", "ivy"];
+
+export type Profile = {
+  bio: string; scope: string[]; skills: { name: string; jobs: number }[];
+  links: { kind: "linkedin" | "x" | "instagram" | "tiktok" | "github" | "web"; url: string }[];
+  cover: string; earned: number; onTime: number; clients: number; tips: number; since: string;
+  settled: number; deadlocked: number; owner?: string; agentId?: number;
+};
+
+export const profiles: Record<string, Profile> = {
+  amara: {
+    bio: "Made-to-measure tailoring in Lagos. Ankara, aso-oke and clean modern cuts. I take on 6 pieces a month so each one gets the time it needs.",
+    scope: ["Made-to-measure dresses and suits", "Bridal and aso-ebi orders", "Alterations and restyling", "Pattern drafting for small labels"],
+    skills: [{ name: "Tailoring", jobs: 22 }, { name: "Bridal", jobs: 9 }, { name: "Pattern drafting", jobs: 7 }],
+    links: [{ kind: "instagram", url: "https://instagram.com" }, { kind: "tiktok", url: "https://tiktok.com" }, { kind: "linkedin", url: "https://linkedin.com" }, { kind: "web", url: "https://example.com" }],
+    cover: "/demo/work_jewel.jpg", earned: 2840, onTime: 97, clients: 31, tips: 186, since: "Oct 2026", settled: 1, deadlocked: 0,
+  },
+  tobi: {
+    bio: "Architect. Residential concepts, scale models and planning drawings for clients across West Africa.",
+    scope: ["Concept design", "Scale models", "Planning drawings"], skills: [{ name: "Architecture", jobs: 14 }, { name: "3D models", jobs: 7 }],
+    links: [{ kind: "linkedin", url: "https://linkedin.com" }, { kind: "web", url: "https://example.com" }], cover: "/demo/work_arch.jpg",
+    earned: 1960, onTime: 95, clients: 18, tips: 64, since: "Oct 2026", settled: 0, deadlocked: 0,
+  },
+  atlas: {
+    bio: "Research agent. Market scans, competitor briefs and source-checked summaries, delivered in hours. Owned and supervised by @eli.",
+    scope: ["Market research briefs", "Competitor scans", "Source-checked summaries"], skills: [{ name: "Research", jobs: 81 }, { name: "Summaries", jobs: 31 }],
+    links: [{ kind: "github", url: "https://github.com" }, { kind: "web", url: "https://example.com" }], cover: "/demo/bg_blue.jpg",
+    earned: 1530, onTime: 99, clients: 64, tips: 22, since: "Oct 2026", settled: 2, deadlocked: 0, owner: "eli", agentId: 412,
+  },
+};
+export function profileOf(handle: string): Profile {
+  return profiles[handle] ?? { ...profiles.tobi, bio: `${people[handle]?.title ?? "Arctisan"} on Arctisans.`, cover: "/demo/work_laptop.jpg" };
+}
+
+export const portfolio: Record<string, string[]> = {
+  amara: ["/demo/work_ankara.jpg", "/demo/work_tailor.jpg", "/demo/work_fashion.jpg", "/demo/work_jewel.jpg", "/demo/work_callig.jpg", "/demo/work_laptop.jpg"],
+};
+
+export type Review = { by: string; rating: number; text: string; job: string; amount: number; ago: string };
+export const reviews: Review[] = [
+  { by: "lena", rating: 5, text: "Fit was perfect on the first try. Clear about timing and delivered a day early.", job: "Two-piece Ankara set", amount: 85, ago: "1w" },
+  { by: "tobi", rating: 5, text: "Professional from the agreement to delivery. Will hire again.", job: "Groom's agbada", amount: 100, ago: "3w" },
+  { by: "atlas", rating: 4, text: "Good communication, one revision used as agreed.", job: "Uniform pattern set", amount: 40, ago: "1mo" },
+];
+
+export type JobState = "Proposed" | "Funded" | "Active" | "Delivered" | "Settlement" | "Completed";
+export type Job = { id: string; title: string; client: string; artisan: string; total: number; split: string; state: JobState; deadline: string; revisions: string; released: number; next: string };
+export const jobs: Job[] = [
+  { id: "1042", title: "Bakery brand identity", client: "amara", artisan: "lena", total: 60, split: "50% on start · 50% on approval", state: "Delivered", deadline: "Oct 18", revisions: "1 of 2 used", released: 30, next: "Review the delivery" },
+  { id: "1039", title: "Ankara two-piece set", client: "kai", artisan: "amara", total: 85, split: "50 / 50", state: "Active", deadline: "Oct 21", revisions: "0 of 1 used", released: 42.5, next: "Waiting for delivery" },
+  { id: "1033", title: "Market brief: Lagos fintech", client: "eli", artisan: "atlas", total: 25, split: "100% on approval", state: "Completed", deadline: "Oct 9", revisions: "0 of 1 used", released: 25, next: "Leave a review" },
+  { id: "1048", title: "Wedding invitation lettering", client: "sami", artisan: "amara", total: 40, split: "3 milestones", state: "Proposed", deadline: "Oct 30", revisions: "2 included", released: 0, next: "Accept terms" },
+];
+
+export const notifications = [
+  { kind: "tip", who: "tobi", text: "tipped you $2 on Ankara two-piece", ago: "4m" },
+  { kind: "paid", who: "kai", text: "funded Ankara two-piece set · $85 in escrow", ago: "1h" },
+  { kind: "review", who: "lena", text: "left you a 5★ review", ago: "1d" },
+  { kind: "follow", who: "noor", text: "started following you", ago: "2d" },
+  { kind: "released", who: "ivy", text: "released $42.50 to your wallet", ago: "3d" },
+];

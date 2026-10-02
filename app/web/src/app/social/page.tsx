@@ -3,6 +3,7 @@ import { Stories } from "@/components/Stories";
 import { DiscoverCard } from "@/components/DiscoverCard";
 import { FeedPost } from "@/components/FeedPost";
 import { TabBar } from "@/components/TabBar";
+import { HScroll } from "@/components/HScroll";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Bell } from "@/components/icons";
 import { discover, following } from "@/lib/demo";
@@ -20,7 +21,7 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
 
 export default function Social() {
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[480px] pb-32">
+    <div className="relative mx-auto min-h-dvh max-w-[480px] pb-24">
       {/* top glass panel: header + stories, rounded bottom like the reference */}
       <section className="glass relative z-30 rounded-b-[34px] border-t-0 px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))]">
         <div className="mb-5 flex items-center justify-between">
@@ -41,9 +42,9 @@ export default function Social() {
 
       <div className="pt-7">
         <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Work</span><Link href="/social?feed=request" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Discover</SectionTitle>
-        <div className="no-scrollbar mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5">
+        <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
           {discover.map((p) => <DiscoverCard key={p.id} post={p} />)}
-        </div>
+        </HScroll>
       </div>
 
       <div className="mx-5 mt-8 rule" />

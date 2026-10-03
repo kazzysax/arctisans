@@ -22,44 +22,44 @@ export default function Setup() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1 fields
-  const nameRef = useRef<HTMLInputElement>(null);
-  const handleRef = useRef<HTMLInputElement>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
-  const cityRef = useRef<HTMLInputElement>(null);
-  const bioRef = useRef<HTMLTextAreaElement>(null);
+  // Every field lives in state, because each step is remounted and anything held only in the DOM would be lost.
+  const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [title, setTitle] = useState("");
+  const [city, setCity] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-
-  // Step 3 link refs
-  const linkRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [links, setLinks] = useState<string[]>(() => LINKS.map(() => ""));
+  const handleOk = /^[a-z0-9_]{3,20}$/.test(handle);
   const steps = ["You", "Profile", "Skills", "Links"];
 
   function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    const url = URL.createObjectURL(f);
-    setAvatarPreview(url);
+    setAvatarFile(f);
+    setAvatarPreview(URL.createObjectURL(f));
   }
 
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      const linkValues = linkRefs.current.map((ref, i) => {
-        const val = ref?.value.trim() ?? "";
+      const linkValues = links.map((raw, i) => {
+        const val = raw.trim();
         if (!val) return null;
         const url = val.startsWith("http") ? val : `https://${val}`;
         return { label: LINKS[i][0], url };
       }).filter(Boolean) as { label: string; url: string }[];
 
       const body = {
-        handle: (handleRef.current?.value ?? "").trim(),
-        displayName: (nameRef.current?.value ?? "").trim(),
+        handle: handle.trim(),
+        displayName: name.trim(),
         kind,
-        title: (titleRef.current?.value ?? "").trim() || undefined,
-        city: (cityRef.current?.value ?? "").trim() || undefined,
-        bio: (bioRef.current?.value ?? "").trim() || undefined,
+        title: title.trim() || undefined,
+        city: city.trim() || undefined,
+        bio: bio.trim() || undefined,
         scope: scope.filter((x) => x.trim()).join("\n") || undefined,
         skills: skills.map((x) => x.toLowerCase()),
         links: linkValues,
@@ -78,23 +78,30 @@ export default function Setup() {
       }
 
       const profile = await res.json();
-      const handle = (profile as { handle?: string }).handle ?? body.handle;
+      const savedHandle = (profile as { handle?: string }).handle ?? body.handle;
 
       // Upload avatar if selected
-      if (avatarRef.current?.files?.[0]) {
+      if (avatarFile) {
         const form = new FormData();
-        form.append("file", avatarRef.current.files[0]);
+        form.append("file", avatarFile);
         await fetch("/api/img/avatar", { method: "POST", credentials: "include", body: form }).catch(() => null);
       }
 
-      r.push(`/u/${handle}?new=1`);
+      r.push(`/u/${savedHandle}?new=1`);
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);
     }
   }
 
-  const next = () => (s < 3 ? setS(s + 1) : save());
+  const next = () => {
+    if (s === 1) {
+      if (!name.trim()) { setError("Add your name to continue."); return; }
+      if (!handleOk) { setError("Pick a handle: 3 to 20 lowercase letters, numbers or _."); return; }
+    }
+    setError(null);
+    if (s < 3) setS(s + 1); else void save();
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(16px,env(safe-area-inset-top))]">
@@ -134,12 +141,12 @@ export default function Setup() {
             <div className="text-[13px] leading-relaxed text-muted">Add a clear photo of you<br />{kind === "agent" ? "or your agent's mark" : "or your brand"}. Square works best.</div>
           </div>
           <div className="mt-6 flex flex-col gap-4">
-            <label className="flex flex-col gap-2"><span className="label">Name</span><input ref={nameRef} className="field" placeholder="Your full name" /></label>
+            <label className="flex flex-col gap-2"><span className="label">Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="field" placeholder="Your full name" /></label>
             <label className="flex flex-col gap-2"><span className="label">Handle</span>
-              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint">@</span><input ref={handleRef} className="field pl-8" placeholder="yourhandle" /></div></label>
-            <label className="flex flex-col gap-2"><span className="label">What you do</span><input ref={titleRef} className="field" placeholder="e.g. Brand designer" /></label>
-            <label className="flex flex-col gap-2"><span className="label">City</span><input ref={cityRef} className="field" placeholder="City or Remote" /></label>
-            <label className="flex flex-col gap-2"><span className="label">Bio</span><textarea ref={bioRef} rows={3} maxLength={600} className="field" placeholder="A short intro about your work and approach." /></label>
+              <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint">@</span><input value={handle} onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="field pl-8" placeholder="yourhandle" /></div></label>
+            <label className="flex flex-col gap-2"><span className="label">What you do</span><input value={title} onChange={(e) => setTitle(e.target.value)} className="field" placeholder="e.g. Brand designer" /></label>
+            <label className="flex flex-col gap-2"><span className="label">City</span><input value={city} onChange={(e) => setCity(e.target.value)} className="field" placeholder="City or Remote" /></label>
+            <label className="flex flex-col gap-2"><span className="label">Bio</span><textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={600} className="field" placeholder="A short intro about your work and approach." /></label>
           </div>
         </>)}
 
@@ -165,7 +172,7 @@ export default function Setup() {
             {LINKS.map(([k, ph], i) => (
               <label key={k} className={`flex items-center gap-3 bg-bg-2 px-4 ${i ? "border-t border-line" : ""}`}>
                 <span className="w-[84px] shrink-0 text-[13px] text-muted">{k}</span>
-                <input ref={(el) => { linkRefs.current[i] = el; }} className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint" placeholder={ph} />
+                <input value={links[i]} onChange={(e) => { const n = [...links]; n[i] = e.target.value; setLinks(n); }} autoCapitalize="none" className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-faint" placeholder={ph} />
               </label>
             ))}
           </div>

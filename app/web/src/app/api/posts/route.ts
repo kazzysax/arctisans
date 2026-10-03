@@ -6,6 +6,7 @@ import { requireSession } from "@/lib/session";
 import { listFeed } from "@/lib/queries";
 import { processImages, storeImage, MAX_IMAGES } from "@/lib/images";
 import { publishCalls } from "@/lib/tx";
+import { isOurVideo } from "@/lib/video";
 
 // Feeds: ?feed=work|request &skill= &city= &kind=human|agent &following=1 &before=
 export const GET = route("posts", 120, async (req) => {
@@ -40,20 +41,27 @@ export const POST = route("post-create", 20, async (req) => {
     city: form.get("city") ? String(form.get("city")) : undefined, budget: form.get("budget") ? Number(form.get("budget")) : undefined,
   });
   const files = form.getAll("images").filter((f): f is File => f instanceof File);
+  const video = form.get("video") ? String(form.get("video")) : null;
   let refs: string[] = [], hashes: string[] = [];
   if (feed === "work") {
-    if (files.length > MAX_IMAGES) return fail(400, `Max ${MAX_IMAGES} pictures per post`);
-    const processed = await processImages(await Promise.all(files.map(async (f) => Buffer.from(await f.arrayBuffer()))));
-    refs = await Promise.all(processed.map(storeImage)); hashes = processed.map((p) => p.sha256);
+    if (video) {
+      if (!isOurVideo(video)) return fail(400, "Invalid video");
+      if (files.length) return fail(400, "Post either a video or pictures");
+      hashes = [video];
+    } else {
+      if (files.length > MAX_IMAGES) return fail(400, `Max ${MAX_IMAGES} pictures per post`);
+      const processed = await processImages(await Promise.all(files.map(async (f) => Buffer.from(await f.arrayBuffer()))));
+      refs = await Promise.all(processed.map(storeImage)); hashes = processed.map((p) => p.sha256);
+    }
   } else {
-    if (files.length) return fail(400, "Requests are text only");
+    if (files.length || video) return fail(400, "Requests are text only");
     if (meta.body.trim().length < 5) return fail(400, "Describe what you need");
   }
   const id = crypto.randomUUID();
   const postHash = keccak256(toBytes(JSON.stringify({ id, wallet, body: meta.body, hashes })));
   await db().execute({
-    sql: "INSERT INTO posts(id,author_wallet,feed,body,images,skill,city,hash,budget,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-    args: [id, wallet, feed, meta.body, JSON.stringify(refs), meta.skill?.toLowerCase() ?? null, meta.city ?? null, postHash, meta.budget ?? null, Date.now()],
+    sql: "INSERT INTO posts(id,author_wallet,feed,body,images,video,skill,city,hash,budget,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    args: [id, wallet, feed, meta.body, JSON.stringify(refs), video, meta.skill?.toLowerCase() ?? null, meta.city ?? null, postHash, meta.budget ?? null, Date.now()],
   });
-  return ok({ id, hash: postHash, anchor: feed === "work" ? publishCalls(postHash, refs[0] ?? "") : [] }, 201);
+  return ok({ id, hash: postHash, anchor: feed === "work" ? publishCalls(postHash, refs[0] ?? video ?? "") : [] }, 201);
 });

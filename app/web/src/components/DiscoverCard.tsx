@@ -15,14 +15,19 @@ export function DiscoverCard({ post }: { post: Post }) {
   const [i, setI] = useState(0);
   const [burst, setBurst] = useState(0);
   const [likes, setLikes] = useState(post.likes);
-  const n = post.photos.length;
+  const n = post.video ? 1 : post.photos.length;
   const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { setBurst((b) => b + 1); setLikes((l) => (l === post.likes ? l + 1 : l)); });
   return (
     <article className="relative h-[460px] w-[300px] shrink-0 snap-start overflow-hidden rounded-[30px] hairline-strong bg-bg-2">
-      <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
-      </ViewTransition>
+      {post.video ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+        ) : (
+        <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+        </ViewTransition>
+        )}
       <button aria-label="Open post" className="absolute inset-0 z-10" onClick={tap} />
       {n > 1 && (
         <>

@@ -13,7 +13,10 @@ const G_RETURN = "/signup";
 const googleCfg = () => ({ clientId: GOOGLE_CLIENT_ID, redirectUri: `${location.origin}${G_RETURN}`, selectAccountPrompt: true });
 const pendingGoogle = (): { deviceToken: string; deviceEncryptionKey: string } | null => { try { return JSON.parse(sessionStorage.getItem(G_KEY) ?? "null"); } catch { return null; } };
 
-type Login = { userToken: string; encryptionKey: string };
+type Login = { userToken: string; encryptionKey: string; at?: number };
+/** Circle approval tokens last 60 minutes. After ~55 we ask the user to confirm it's them again. */
+export const LOGIN_TTL = 55 * 60 * 1000;
+export class ReauthError extends Error { constructor() { super("For your safety, approvals need a fresh sign-in after an hour. Sign in again to continue."); } }
 const KEY = "arc_circle_login";
 let sdk: Sdk | null = null;
 let onLogin: ((e: unknown, r?: Login) => void) | null = null;
@@ -28,7 +31,7 @@ async function getSdk(): Promise<Sdk> {
   const { W3SSdk } = await import("@circle-fin/w3s-pw-web-sdk");
   const g = googleReady() ? pendingGoogle() : null;
   sdk = new W3SSdk({ appSettings: { appId: CIRCLE_APP_ID }, ...(g ? { loginConfigs: { ...g, google: googleCfg() } } : {}) }, (error: unknown, result: unknown) => {
-    if (!error && result) sessionStorage.setItem(KEY, JSON.stringify(result));
+    if (!error && result) sessionStorage.setItem(KEY, JSON.stringify({ ...(result as object), at: Date.now() }));
     onLogin?.(error, result as Login | undefined);
   });
   return sdk;
@@ -108,13 +111,15 @@ export type Call = { to: string; data: string; label: string };
  */
 export async function sendCalls(calls: Call[], onStep?: (label: string, i: number, n: number) => void): Promise<string | null> {
   const login = savedLogin();
-  if (!login) throw new Error("Please sign in again to approve this.");
+  if (!login || !login.at || Date.now() - login.at > LOGIN_TTL) { clearLogin(); throw new ReauthError(); }
   let hash: string | null = null;
   for (let i = 0; i < calls.length; i++) {
     const c = calls[i];
     onStep?.(c.label, i, calls.length);
     const since = Date.now();
-    const ch = await post<{ challengeId: string }>("/api/wallet/challenge", { userToken: login.userToken, to: c.to, data: c.data });
+    let ch: { challengeId: string };
+    try { ch = await post<{ challengeId: string }>("/api/wallet/challenge", { userToken: login.userToken, to: c.to, data: c.data }); }
+    catch (e) { if ((e as Error).message === "REAUTH") { clearLogin(); throw new ReauthError(); } throw e; }
     await runChallenge(login, ch.challengeId);
     const r = await post<{ txHash: string | null }>("/api/wallet/settle", { userToken: login.userToken, since });
     hash = r.txHash;

@@ -19,7 +19,15 @@ export const POST = route("wallet-challenge", 60, async (req) => {
     const w = await arcWallet(b.userToken);
     if (!w || w.address.toLowerCase() !== wallet) return fail(403, "Wallet does not match your session");
     return ok(await contractChallenge(b.userToken, w.id, b.to, b.data));
-  } catch (e) { if (e instanceof CircleError) return fail(e.status === 503 ? 503 : 400, e.status === 503 ? e.message : "Could not prepare the transaction"); throw e; }
+  } catch (e) {
+    if (e instanceof CircleError) {
+      console.error("[wallet-challenge] circle", e.status, e.code, e.message);
+      if (e.status === 503) return fail(503, e.message);
+      if (e.status === 401 || e.status === 403 || /token|expired|auth/i.test(e.message)) return fail(401, "REAUTH");
+      return fail(400, `Circle could not prepare it: ${e.message}`);
+    }
+    throw e;
+  }
 });
 
 /** Poll a submitted transaction until it has a hash (then the client calls /api/tx so the UI updates at once). */

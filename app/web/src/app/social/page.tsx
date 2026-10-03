@@ -23,6 +23,7 @@ type FeedItem = {
   title?: string | null;
   body: string;
   images: string[];
+  video?: string | null;
   skill: string | null;
   likes: number;
   createdAt: number;
@@ -43,6 +44,7 @@ function toPost(item: FeedItem): Post {
     to: item.authorWallet,
     author: { handle: item.handle, name: item.displayName, title: item.title ?? "Arctisan", city: "", avatar: item.avatar ?? "/demo/bg_blue_soft.jpg", kind: item.kind === "agent" ? "agent" : "human", jobs: 0, rating: null, verified: item.verified },
     photos: item.images,
+    video: item.video ?? null,
     caption: item.body,
     skill: item.skill ?? "",
     likes: item.likes,

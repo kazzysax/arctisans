@@ -16,7 +16,7 @@ export function FeedPost({ post }: { post: Post }) {
   const [liked, setLiked] = useState(false);
   const [burst, setBurst] = useState(0);
   const [tip, setTip] = useState(false);
-  const n = post.photos.length;
+  const n = post.video ? 1 : post.photos.length;
   const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { setLiked(true); setBurst((b) => b + 1); });
   return (
     <article className="overflow-hidden rounded-[28px] hairline bg-bg-2">
@@ -34,10 +34,15 @@ export function FeedPost({ post }: { post: Post }) {
       </header>
 
       <div className="relative mx-3.5 aspect-[4/5] overflow-hidden rounded-[20px] bg-bg">
+{post.video ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+        ) : (
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
         </ViewTransition>
+        )}
         <button aria-label="Open post" className="absolute inset-0" onClick={tap} />
         {n > 1 && (
           <>

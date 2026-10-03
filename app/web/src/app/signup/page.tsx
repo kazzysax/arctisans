@@ -12,6 +12,9 @@ import { circleReady, signInWithEmail, finishLogin, googleReady, startGoogleSign
 //  3. We POST userToken to /api/auth/circle → server verifies, sets session cookie
 //  4. If profile exists → /social; if not → /setup
 
+// Where to go after signing in: ?next=/jobs (same-site paths only), else home.
+const afterLogin = () => { const n = new URLSearchParams(location.search).get("next") ?? ""; return /^\/[a-z0-9/_-]*$/i.test(n) ? n : "/social"; };
+
 export default function SignUp() {
   const r = useRouter();
   const [step, setStep] = useState<"start" | "code">("start");
@@ -29,7 +32,7 @@ export default function SignUp() {
     try {
       const login = await signInWithEmail(email); // emails the code, opens Circle's window to enter it
       const { hasProfile } = await finishLogin(login); // creates the wallet on first visit, then our session
-      r.push(hasProfile ? "/social" : "/setup");
+      r.push(hasProfile ? afterLogin() : "/setup");
     } catch (e) {
       setError((e as Error).message);
       setStep("start");
@@ -49,7 +52,7 @@ export default function SignUp() {
         const login = await resumeGoogleLogin();
         if (!login) return;
         const { hasProfile } = await finishLogin(login);
-        r.push(hasProfile ? "/social" : "/setup");
+        r.push(hasProfile ? afterLogin() : "/setup");
       } catch (e) { if (live) setError((e as Error).message); }
       finally { if (live) setLoading(false); }
     })();

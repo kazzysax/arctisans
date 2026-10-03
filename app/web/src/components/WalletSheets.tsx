@@ -3,7 +3,7 @@ import { useState } from "react";
 import { encodeFunctionData, erc20Abi, isAddress } from "viem";
 import { Sheet } from "./ui";
 import { USDC } from "@/lib/chain";
-import { sendCalls } from "@/lib/walletClient";
+import { sendCalls, ReauthError } from "@/lib/walletClient";
 
 /** Add funds: your Arc address to send USDC to, with copy. */
 export function ReceiveSheet({ open, onClose, wallet }: { open: boolean; onClose: () => void; wallet: string }) {
@@ -28,16 +28,17 @@ export function WithdrawSheet({ open, onClose, balance, onDone }: { open: boolea
   const [amt, setAmt] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [reauth, setReauth] = useState(false);
   const [hash, setHash] = useState<string | null | undefined>(undefined);
   const units = Math.round(Number(amt) * 1e6);
   const valid = isAddress(to) && units > 0 && (balance === null || units <= balance);
   async function send() {
-    setErr(null); setBusy(true);
+    setErr(null); setReauth(false); setBusy(true);
     try {
       const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to as `0x${string}`, BigInt(units)] });
       setHash(await sendCalls([{ to: USDC, data, label: "Send USDC" }]));
       onDone();
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setErr((e as Error).message); if (e instanceof ReauthError) setReauth(true); } finally { setBusy(false); }
   }
   const close = () => { onClose(); setTimeout(() => { setHash(undefined); setErr(null); }, 300); };
   return (
@@ -60,6 +61,7 @@ export function WithdrawSheet({ open, onClose, balance, onDone }: { open: boolea
           </div>
           <p className="mt-2 text-[12px] text-faint">Available: {balance === null ? "—" : `$${(balance / 1e6).toFixed(2)}`}. Only send to an address on Arc.</p>
           {err && <p className="mt-3 text-[13px] text-red-500">{err}</p>}
+          {reauth && <a href="/signup?next=/jobs" className="btn btn-ghost mt-3 w-full">Sign in again</a>}
           <button disabled={!valid || busy} onClick={send} className="btn btn-solid mt-5 w-full disabled:opacity-40">{busy ? "Approve in Circle…" : "Send"}</button>
         </>
       )}

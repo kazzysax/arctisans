@@ -18,12 +18,12 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [real, setReal] = useState<Post | null | undefined>(sample ? null : undefined);
   useEffect(() => {
     if (sample) return;
-    fetch(`/api/posts?id=${encodeURIComponent(id)}`).then((r) => r.json()).then((j: { items?: { id: string; handle: string; displayName: string; title: string | null; avatar: string | null; kind: string; verified: boolean; authorWallet: string; images: string[]; body: string; skill: string | null; likes: number; createdAt: number }[] }) => {
+    fetch(`/api/posts?id=${encodeURIComponent(id)}`).then((r) => r.json()).then((j: { items?: { id: string; handle: string; displayName: string; title: string | null; avatar: string | null; kind: string; verified: boolean; authorWallet: string; images: string[]; video: string | null; body: string; skill: string | null; likes: number; createdAt: number }[] }) => {
       const x = j.items?.[0];
       if (!x) { setReal(null); return; }
       const author: Person = { handle: x.handle, name: x.displayName, title: x.title ?? "Arctisan", city: "", avatar: x.avatar ?? "/demo/bg_blue_soft.jpg", kind: x.kind === "agent" ? "agent" : "human", jobs: 0, rating: null, verified: x.verified };
       const h = Math.floor((Date.now() - x.createdAt) / 3600000);
-      setReal({ id: x.id, by: x.handle, author, to: x.authorWallet, photos: x.images, caption: x.body, skill: x.skill ?? "", likes: x.likes, tips: 0, ago: h < 1 ? "now" : h < 24 ? `${h}h` : `${Math.floor(h / 24)}d` });
+      setReal({ id: x.id, by: x.handle, author, to: x.authorWallet, photos: x.images, video: x.video, caption: x.body, skill: x.skill ?? "", likes: x.likes, tips: 0, ago: h < 1 ? "now" : h < 24 ? `${h}h` : `${Math.floor(h / 24)}d` });
     }).catch(() => setReal(null));
   }, [id, sample]);
   const post = sample ?? real ?? undefined;
@@ -42,11 +42,16 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   return (
     <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[var(--img-bg)] lg:mt-6 lg:rounded-[30px]">
+{post.video ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={post.video} controls loop playsInline autoPlay muted preload="metadata" className="absolute inset-0 h-full w-full bg-black object-contain" />
+        ) : (<>
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-cover" />
         </ViewTransition>
         <button aria-label="Next picture, double tap to appreciate" onClick={tap} className="absolute inset-0" />
+        </>)}
         <LikeBurst k={burst} />
         <div className="absolute inset-x-4 top-[max(16px,env(safe-area-inset-top))] flex items-center justify-between">
           <Back />

@@ -25,7 +25,7 @@ export function SideNav() {
   );
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-line px-4 pb-6 pt-7 lg:flex">
-      <Link href="/social" className="mb-8 flex items-center gap-2.5 px-4"><Mark size={26} /><span className="font-serif text-[19px] uppercase tracking-[0.2em]">Arctisans</span></Link>
+      <Link href="/social" className="mb-8 flex items-center gap-2.5 px-4"><Mark size={39} /><span className="font-serif text-[19px] uppercase tracking-[0.2em]">Arctisans</span></Link>
       <nav className="flex flex-col gap-1">
         {row("home", "/social", "Home", <Home size={20} />)}
         {row("search", "/search", "Search", <Search size={20} />)}

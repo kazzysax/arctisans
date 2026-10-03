@@ -35,7 +35,7 @@ export default function Welcome() {
             </div>
           ))}
         </div>
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rise" style={{ transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))` }}><LogoTile size={78} /></div>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rise" style={{ transform: `translate(calc(-50% + ${tilt.x * 6}px), calc(-50% + ${tilt.y * 6}px))` }}><LogoTile size={117} /></div>
         </div>
       </div>
 

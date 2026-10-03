@@ -73,7 +73,7 @@ export default function SignUp() {
 
       <div className="relative mx-auto flex min-h-dvh max-w-[440px] flex-col px-6 pb-[max(28px,env(safe-area-inset-bottom))] pt-[max(22px,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between text-white/80">
-          <Mark size={26} />
+          <Mark size={39} />
           <span className="text-[11px] uppercase tracking-[0.3em]">On Arc</span>
         </div>
 

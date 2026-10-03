@@ -67,7 +67,7 @@ export default function SignUp() {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-black text-white">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/demo/bg_blue.jpg" alt="" className="absolute inset-0 h-full w-full scale-110 object-cover" />
+      <img src="/demo/bg_leaf.jpg" alt="" className="absolute inset-0 h-full w-full scale-110 object-cover" />
       <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_35%,transparent_0%,rgba(4,14,26,0.18)_55%,rgba(0,0,0,0.7)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-[64%] bg-gradient-to-t from-black from-[42%] via-black/85 to-transparent" />
 
@@ -80,7 +80,7 @@ export default function SignUp() {
         {/* the square block */}
         <div className="rise mx-auto mt-[9vh] grid aspect-square w-[58%] max-w-[230px] place-items-center bg-[#0b1a29]/90 px-4 text-center shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
           <div>
-            <div className="font-serif text-[30px] font-medium uppercase leading-[1.05] tracking-[0.26em] text-[#e6f1fb]">Arcti<br />sans</div>
+            <div className="whitespace-nowrap font-serif text-[22px] font-medium uppercase leading-none tracking-[0.2em] text-[#e6f1fb]">Arctisans</div>
             <div className="mx-auto my-3 h-px w-10 bg-white/25" />
             <div className="text-[9.5px] uppercase tracking-[0.32em] text-white/55">Work · Hire · Paid</div>
           </div>

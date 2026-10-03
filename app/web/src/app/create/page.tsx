@@ -2,7 +2,8 @@
 import { useState, useRef, ChangeEvent } from "react";
 import { upload } from "@vercel/blob/client";
 import { CRAFTS } from "@/lib/crafts";
-import { VIDEO_MAX_BYTES, VIDEO_MAX_SECONDS, VIDEO_TYPES } from "@/lib/video";
+import { VIDEO_TYPES } from "@/lib/video";
+import { VideoTrimmer } from "@/components/VideoTrimmer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/ui";
@@ -23,6 +24,7 @@ export default function Create() {
   const [caption, setCaption] = useState("");
   const [skill, setSkill] = useState<string>(CRAFTS[0].one);
   const [budget, setBudget] = useState("40");
+  const [toTrim, setToTrim] = useState<File | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const picIn = useRef<HTMLInputElement>(null), vidIn = useRef<HTMLInputElement>(null);
@@ -36,14 +38,8 @@ export default function Create() {
     const f = e.target.files?.[0]; e.target.value = "";
     if (!f) return;
     if (!VIDEO_TYPES.includes(f.type)) { setErr("Use an MP4, MOV or WebM video."); return; }
-    if (f.size > VIDEO_MAX_BYTES) { setErr(`Video must be under ${VIDEO_MAX_BYTES / 1024 / 1024} MB.`); return; }
-    const url = URL.createObjectURL(f), v = document.createElement("video");
-    v.preload = "metadata"; v.src = url;
-    v.onloadedmetadata = () => {
-      if (v.duration > VIDEO_MAX_SECONDS + 0.5) { setErr(`Keep it to ${VIDEO_MAX_SECONDS} seconds or less (this one is ${Math.round(v.duration)}s).`); URL.revokeObjectURL(url); return; }
-      setVid({ file: f, url, secs: Math.round(v.duration) }); setPics([]);
-    };
-    v.onerror = () => { setErr("Could not read that video."); URL.revokeObjectURL(url); };
+    if (f.size > 500 * 1024 * 1024) { setErr("That video is too large to trim here (500 MB max)."); return; }
+    setToTrim(f); // always opens the trimmer: it keeps the clip within 30s and 20 MB
   }
   async function share() {
     setErr(null);
@@ -90,6 +86,7 @@ export default function Create() {
       <div className="rise flex flex-col gap-6 px-5 pt-2">
         {mode === "work" ? (<>
           <input ref={picIn} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={addPics} />
+          {toTrim && <VideoTrimmer file={toTrim} onCancel={() => setToTrim(null)} onDone={(f, secs) => { setVid({ file: f, url: URL.createObjectURL(f), secs }); setPics([]); setToTrim(null); }} />}
           <input ref={vidIn} type="file" accept="video/mp4,video/quicktime,video/webm" hidden onChange={addVideo} />
           <div>
             {vid ? (
@@ -108,7 +105,7 @@ export default function Create() {
               </div>
             )}
             <div className="mt-3 flex items-center justify-between">
-              <p className="text-[12px] text-faint">{vid ? "1 video · up to 30s, 20 MB" : `${pics.length}/3 pictures · compressed automatically`}</p>
+              <p className="text-[12px] text-faint">{vid ? "1 video · long videos can be trimmed" : `${pics.length}/3 pictures · compressed automatically`}</p>
               {!vid && <button onClick={() => vidIn.current?.click()} className="chip press flex items-center gap-1.5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="6" width="13" height="12" rx="3" /><path d="M16 10.5l5-3v9l-5-3z" /></svg>Add video</button>}
             </div>
           </div>

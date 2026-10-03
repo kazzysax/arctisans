@@ -18,8 +18,7 @@ export const POST = route("auth-circle", 20, async (req) => {
   const r = await fetch(`${CIRCLE}/wallets?blockchain=ARC`, { headers: { Authorization: `Bearer ${key}`, "X-User-Token": userToken } });
   if (!r.ok) return fail(401, "Sign-in could not be verified");
   const j = (await r.json()) as { data?: { wallets?: { address: string; blockchain: string; accountType?: string }[] } };
-  const arcs = j.data?.wallets?.filter((x) => x.blockchain.startsWith("ARC")) ?? [];
-  const w = arcs.find((x) => x.accountType === "EOA") ?? arcs[0] ?? null;
+  const w = j.data?.wallets?.find((x) => x.blockchain.startsWith("ARC")) ?? null;
   if (!w) return fail(409, "No wallet yet");
   const wallet = getAddress(w.address).toLowerCase();
   const res = ok({ wallet });

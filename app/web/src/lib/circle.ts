@@ -37,18 +37,11 @@ export const requestSocialToken = (deviceId: string) =>
 
 /** First sign-in only: returns a challenge the user approves in Circle's hosted UI to create their wallet. */
 export const initializeUser = (userToken: string) =>
-  call<{ challengeId: string }>("/user/initialize", { userToken, body: { idempotencyKey: crypto.randomUUID(), accountType: "EOA", blockchains: [circleChain()] } });
-
-/** Extra wallet for someone who signed up earlier with a sponsored-fee (SCA) wallet. EOA wallets pay their own network fee in USDC, so no Gas Station is needed. */
-export const createEoaWallet = (userToken: string) =>
-  call<{ challengeId: string }>("/user/wallets", { userToken, body: { idempotencyKey: crypto.randomUUID(), accountType: "EOA", blockchains: [circleChain()] } });
+  call<{ challengeId: string }>("/user/initialize", { userToken, body: { idempotencyKey: crypto.randomUUID(), accountType: "SCA", blockchains: [circleChain()] } });
 
 export type CircleWallet = { id: string; address: string; blockchain: string };
 export const listWallets = async (userToken: string) => (await call<{ wallets: CircleWallet[] }>("/wallets", { userToken })).wallets ?? [];
-export const arcWallet = async (userToken: string) => {
-  const arcs = (await listWallets(userToken)).filter((w) => w.blockchain.startsWith("ARC")) as (CircleWallet & { accountType?: string })[];
-  return arcs.find((w) => w.accountType === "EOA") ?? arcs[0] ?? null; // prefer the self-paying wallet
-};
+export const arcWallet = async (userToken: string) => (await listWallets(userToken)).find((w) => w.blockchain.startsWith("ARC")) ?? null;
 
 /** A contract call from the user's wallet. Circle returns a challenge; the user approves it in the SDK. Gas is sponsored by our Gas Station policy. */
 export const contractChallenge = (userToken: string, walletId: string, to: string, data: string) =>

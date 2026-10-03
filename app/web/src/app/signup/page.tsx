@@ -67,7 +67,7 @@ export default function SignUp() {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-black text-white">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/demo/bg_leaf.jpg" alt="" className="absolute inset-0 h-full w-full scale-110 object-cover" />
+      <img src="/demo/bg_leaf.jpg" alt="" className="absolute inset-x-0 top-0 h-auto w-full" />
       <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_35%,transparent_0%,rgba(4,14,26,0.18)_55%,rgba(0,0,0,0.7)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-[64%] bg-gradient-to-t from-black from-[42%] via-black/85 to-transparent" />
 

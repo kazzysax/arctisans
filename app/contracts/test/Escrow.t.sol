@@ -82,6 +82,64 @@ contract EscrowTest is Test {
         vm.warp(block.timestamp + 3 days + 1); e.poke(id);
         assertEq(u.balanceOf(c), 50e6);
     }
+    // ---- hard deadline: agreed date + 3 days ----
+    function _jobDL(uint96 amt, uint64 dl) internal returns (uint256 id) {
+        uint96[] memory m = new uint96[](1); m[0] = amt;
+        vm.prank(c); id = e.propose(c, a, "t", 0, m, dl, 1, ArctisanEscrow.DeadlockRule.Split5050);
+        vm.prank(a); e.agree(id, "t"); u.mint(c, amt); vm.startPrank(c); u.approve(address(e), amt); e.fund(id, "t"); vm.stopPrank();
+    }
+    function _keepAlive(uint256 id, uint256 until) internal {
+        uint256 n = block.timestamp;
+        while (n + 2 days < until) { n += 2 days; vm.warp(n); vm.prank(a); e.postProgress(id, "u"); }
+        vm.warp(until);
+    }
+    function test_updatesCannotKeepJobAlivePastHardDeadline() public {
+        uint64 dl = uint64(block.timestamp + 7 days);
+        uint256 id = _jobDL(40e6, dl); vm.prank(a); e.start(id);
+        // artisan posts an update every 2 days (never silent for 3), right up to the deadline + 3 days
+        uint256 now_ = block.timestamp;
+        while (now_ + 2 days <= uint256(dl) + 3 days) { now_ += 2 days; vm.warp(now_); vm.prank(a); e.postProgress(id, "u"); }
+        vm.warp(uint256(dl) + 3 days - 1); vm.expectRevert(); e.poke(id); // still inside the grace
+        vm.warp(uint256(dl) + 3 days + 1);
+        e.poke(id); // anyone can trigger the refund
+        assertEq(u.balanceOf(c), 40e6);
+        assertEq(uint8(e.statusOf(id)), uint8(ArctisanEscrow.Status.Abandoned));
+    }
+    function test_cannotPostUpdateOrDeliverAfterHardDeadline() public {
+        uint64 dl = uint64(block.timestamp + 7 days);
+        uint256 id = _jobDL(40e6, dl); vm.prank(a); e.start(id);
+        vm.warp(uint256(dl) + 3 days + 1);
+        vm.prank(a); vm.expectRevert(); e.postProgress(id, "u");
+        vm.prank(a); vm.expectRevert(); e.deliver(id, "d");
+        vm.prank(c); vm.expectRevert(); e.openSettlement(id);
+    }
+    function test_deliveredInGraceWindowIsSafe() public {
+        uint64 dl = uint64(block.timestamp + 7 days);
+        uint256 id = _jobDL(40e6, dl); vm.prank(a); e.start(id);
+        _keepAlive(id, uint256(dl) + 2 days);
+        vm.warp(uint256(dl) + 3 days - 1); vm.prank(a); e.deliver(id, "d"); // late but inside grace: allowed
+        vm.warp(uint256(dl) + 10 days); // client has 3 days of silence rule, deadline no longer refunds a delivered job
+        vm.prank(c); e.approveDelivery(id);
+        assertEq(u.balanceOf(a), 40e6);
+    }
+    function test_revisionIsNotKilledByHardDeadline() public {
+        uint64 dl = uint64(block.timestamp + 7 days);
+        uint256 id = _jobDL(40e6, dl); vm.prank(a); e.start(id);
+        _keepAlive(id, uint256(dl) + 3 days - 20);
+        vm.warp(uint256(dl) + 3 days - 10); vm.prank(a); e.deliver(id, "d");
+        vm.prank(c); e.requestRevision(id, "r"); // client asks for changes right at the end
+        vm.warp(block.timestamp + 2 days); // past deadline + 3 days, but artisan has the normal 3-day silence window
+        vm.expectRevert(); e.poke(id);
+        vm.prank(a); e.deliver(id, "d2"); vm.prank(c); e.approveDelivery(id);
+        assertEq(u.balanceOf(a), 40e6);
+    }
+    function test_cannotStartAfterHardDeadline() public {
+        uint64 dl = uint64(block.timestamp + 7 days);
+        uint256 id = _jobDL(40e6, dl);
+        vm.warp(uint256(dl) + 3 days + 1);
+        vm.prank(a); vm.expectRevert(); e.start(id);
+        vm.prank(c); e.cancel(id); assertEq(u.balanceOf(c), 40e6);
+    }
     function test_clientSilentDeadlockSplit() public {
         uint256 id = _job(49_999_999, 50e6); vm.prank(a); e.start(id); vm.prank(a); e.deliver(id, "d"); // upfront must be <= 50%
         vm.warp(block.timestamp + 3 days + 1); e.poke(id); // -> settlement

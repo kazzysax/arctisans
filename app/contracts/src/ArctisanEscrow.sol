@@ -33,6 +33,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         bool artisanProposed;       // invoice flow: artisan created, client funds = accept
         bool clientAgreed;
         bool artisanAgreed;
+        bool inRevision;            // client asked for changes: the hard deadline no longer applies, only the 3-day silence rule
         // slot 3
         uint96 total;               // 6-dec USDC units
         uint96 released;            // paid out so far (to artisan, gross incl. fee)
@@ -45,6 +46,8 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
     }
 
     uint256 public constant SILENCE = 3 days;
+    /// Hard deadline: agreed date + this grace. Past it, unfinished work is refunded no matter how many updates were posted.
+    uint256 public constant DEADLINE_GRACE = 3 days;
     uint256 public constant DEADLOCK_WINDOW = 48 hours;
     uint16 public constant MAX_FEE_BPS = 0;   // feeless, enforced: setParams can never add a fee
     uint8 public constant MAX_MILESTONES = 10;
@@ -178,10 +181,16 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
     }
 
     // ---------------- work ----------------
+    /// True while the artisan is working on the first delivery of a milestone and the agreed date + grace has passed.
+    function _hardExpired(Job storage j) internal view returns (bool) {
+        return j.status == Status.Active && !j.inRevision && block.timestamp > uint256(j.deadline) + DEADLINE_GRACE;
+    }
+
     function start(uint256 id) external nonReentrant {
         Job storage j = jobs[id];
         if (msg.sender != j.artisan) revert NotParty();
         if (j.status != Status.Funded) revert BadState();
+        if (block.timestamp > uint256(j.deadline) + DEADLINE_GRACE) revert Expired(); // too late to start: client may cancel for a full refund
         j.status = Status.Active; j.clockStart = uint64(block.timestamp);
         emit JobStarted(id, msg.sender, uint64(block.timestamp));
         if (j.upfront > 0) _release(id, j, j.upfront, type(uint8).max);
@@ -191,7 +200,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         Job storage j = jobs[id];
         if (msg.sender != j.artisan) revert NotParty();
         if (j.status != Status.Active) revert BadState();
-        if (block.timestamp > j.clockStart + SILENCE) revert Expired(); // must poke() -> refund
+        if (block.timestamp > j.clockStart + SILENCE || _hardExpired(j)) revert Expired(); // must poke() -> refund
         j.clockStart = uint64(block.timestamp);
         emit ProgressPosted(id, msg.sender, updateHash);
     }
@@ -200,8 +209,8 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         Job storage j = jobs[id];
         if (msg.sender != j.artisan) revert NotParty();
         if (j.status != Status.Active) revert BadState();
-        if (block.timestamp > j.clockStart + SILENCE) revert Expired();
-        j.status = Status.Delivered; j.clockStart = uint64(block.timestamp);
+        if (block.timestamp > j.clockStart + SILENCE || _hardExpired(j)) revert Expired();
+        j.status = Status.Delivered; j.inRevision = false; j.clockStart = uint64(block.timestamp);
         emit Delivered(id, msg.sender, j.nextMilestone, deliveryHash, block.timestamp <= j.deadline);
     }
 
@@ -211,7 +220,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         if (j.status != Status.Delivered) revert BadState();
         if (block.timestamp > j.clockStart + SILENCE) revert Expired();
         if (j.revisionsUsed >= j.revisionsAllowed) revert BadState(); // out of revisions: approve or openSettlement
-        j.revisionsUsed++; j.status = Status.Active; j.clockStart = uint64(block.timestamp);
+        j.revisionsUsed++; j.status = Status.Active; j.inRevision = true; j.clockStart = uint64(block.timestamp);
         emit RevisionRequested(id, msg.sender, j.revisionsUsed, noteHash);
     }
 
@@ -243,7 +252,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         Job storage j = jobs[id];
         Status s = j.status;
         if (s == Status.Active) {
-            if (block.timestamp <= j.clockStart + SILENCE) revert NotExpired();
+            if (block.timestamp <= j.clockStart + SILENCE && !_hardExpired(j)) revert NotExpired();
             j.status = Status.Abandoned;
             records[j.artisan].abandoned++; // permanently loses upfront privilege
             uint96 refund = j.total - j.released;
@@ -268,7 +277,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
         Job storage j = jobs[id];
         if (msg.sender != j.client && msg.sender != j.artisan) revert NotParty();
         if (j.status != Status.Active && j.status != Status.Delivered) revert BadState();
-        if (block.timestamp > j.clockStart + SILENCE) revert Expired(); // expired timers must be poked
+        if (block.timestamp > j.clockStart + SILENCE || _hardExpired(j)) revert Expired(); // expired timers must be poked
         _openSettlement(id, j, 0);
     }
 

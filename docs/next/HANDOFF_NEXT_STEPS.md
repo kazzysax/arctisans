@@ -201,3 +201,26 @@ Done since the sections above:
 **Verified:** tsc, eslint (0 errors), 49 tests, `next build`, and the invoice rendered in Chrome from a seeded database as client and artisan (right actions per role and state).
 **NOT verified:** anything that needs a live Circle key. Sign-in, wallet creation, signing and the transaction-hash lookup have never run against Circle. First job when keys exist: run one full job on testnet and fix whatever Circle returns that the code did not expect.
 **Still on demo data:** feed cards, stories, post and request pages, agents console, welcome.
+
+---
+## Update (Oct 3) — LIVE on mainnet, state at end of session
+
+**Live:** https://arctisans.vercel.app (Vercel project `arctisans`, team kazzysaxs-projects; deploy with `cd app/web && vercel deploy --prod --yes`).
+**Contracts (Arc mainnet, chain 5042):** see `docs/DEPLOYMENT.md`. Escrow `0x9D37…Efb6`, Social `0xE408…C2b2`, owner = deployer wallet `0x7D7f…A1D8`.
+**Env:** all in Vercel production + `app/web/.env.local` (gitignored). Turso (DB), Pinata (images, gateway set), Circle mainnet key + App ID, Google client ID, generated APP_SECRET/CRON_SECRET.
+
+**Verified working live:** Google sign-in (Circle social login) creates a Circle user and reaches /setup; Turso tables exist; Pinata upload + gateway fetch works.
+**Fixed today:** CV setup lost name/handle between steps (fields now in state; deployed, not yet re-tested by the user on a real save).
+
+**Still to do, in order**
+1. User re-runs CV setup on phone; confirm profile row in Turso + avatar on Pinata.
+2. Circle Console: save OTP email settings (SMTP via Resend works; the branded template would not save — default template is fine). Subject must use `{{code}}` (two braces).
+3. Circle Gas Station policy for Arc (card + daily cap) — needed for gasless sends.
+4. Generate verifier wallet; `setVerifier` on escrow (needs the owner key — do NOT reuse the key that was pasted in chat; move ownership to a fresh wallet first).
+5. Keeper: cron hitting `/api/cron/index` with `CRON_SECRET` every 5–10 min (cron-job.org or GitHub Actions) + a funded keeper wallet.
+6. Run one real $1 job end to end (propose → fund → deliver → approve). Circle transaction signing and tx-hash lookup have never run against live Circle.
+7. Google: add Branding fields and Publish app (currently Testing; add test users meanwhile). Add a privacy page if Google insists.
+8. Remaining demo-data screens (feed cards, stories, post/request pages, agents console, welcome).
+9. Audit (deferred by the user), explorer source verification, domain, official logo swap (leaf mark A is in place meanwhile: `components/Logo.tsx`, `app/icon.svg`).
+
+**Security note:** the deployer private key was pasted in chat on Oct 2. Treat it as exposed; rotate ownership after step 4.

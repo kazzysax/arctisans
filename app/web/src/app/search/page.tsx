@@ -84,7 +84,7 @@ export default function Search() {
   const loading = view === "People" ? loadingP : loadingR;
 
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
       <header className="sticky top-0 z-30 bg-[var(--bg)]/85 px-5 pb-3 pt-[max(18px,env(safe-area-inset-top))] backdrop-blur-xl">
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">Search</h1>
         <div className="relative mt-4"><SearchIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-faint" />

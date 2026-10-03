@@ -1,8 +1,8 @@
 "use client";
-import { use, useState, ViewTransition } from "react";
+import { use, useState, useEffect, ViewTransition } from "react";
 import Link from "next/link";
 import { notFound, useSearchParams } from "next/navigation";
-import { people, postById, profileOf } from "@/lib/demo";
+import { people, postById, profileOf, type Post, type Person } from "@/lib/demo";
 import { Back } from "@/components/ui";
 import { Verified } from "@/components/Verified";
 import { FollowButton } from "@/components/fun/FollowButton";
@@ -14,7 +14,19 @@ import { Roll } from "@/components/fun/Roll";
 // Work post: the photo from the feed morphs into this hero. Swipe through up to 3 pictures.
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const post = postById(id);
+  const sample = postById(id);
+  const [real, setReal] = useState<Post | null | undefined>(sample ? null : undefined);
+  useEffect(() => {
+    if (sample) return;
+    fetch(`/api/posts?id=${encodeURIComponent(id)}`).then((r) => r.json()).then((j: { items?: { id: string; handle: string; displayName: string; title: string | null; avatar: string | null; kind: string; verified: boolean; authorWallet: string; images: string[]; body: string; skill: string | null; likes: number; createdAt: number }[] }) => {
+      const x = j.items?.[0];
+      if (!x) { setReal(null); return; }
+      const author: Person = { handle: x.handle, name: x.displayName, title: x.title ?? "Arctisan", city: "", avatar: x.avatar ?? "/demo/bg_blue_soft.jpg", kind: x.kind === "agent" ? "agent" : "human", jobs: 0, rating: null, verified: x.verified };
+      const h = Math.floor((Date.now() - x.createdAt) / 3600000);
+      setReal({ id: x.id, by: x.handle, author, to: x.authorWallet, photos: x.images, caption: x.body, skill: x.skill ?? "", likes: x.likes, tips: 0, ago: h < 1 ? "now" : h < 24 ? `${h}h` : `${Math.floor(h / 24)}d` });
+    }).catch(() => setReal(null));
+  }, [id, sample]);
+  const post = sample ?? real ?? undefined;
   const sp = useSearchParams();
   const [i, setI] = useState(Number(sp.get("i") ?? 0));
   const [likes, setLikes] = useState(post?.likes ?? 0);
@@ -23,10 +35,12 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [tip, setTip] = useState(false);
   const like = () => { if (!liked) { setLiked(true); setLikes((l) => l + 1); } setBurst((b) => b + 1); };
   const tap = useTaps(() => setI((x) => (x + 1) % (post?.photos.length ?? 1)), like);
+  if (!sample && real === undefined) return <div className="mx-auto min-h-dvh max-w-[560px]"><div className="aspect-[4/5] w-full animate-pulse bg-[var(--img-bg)]" /></div>;
   if (!post) notFound();
-  const p = people[post.by], f = profileOf(post.by);
+  const p: Person = post.author ?? people[post.by], f = profileOf(post.by);
+  const demo = !!post.demo;
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-28">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[var(--img-bg)] lg:mt-6 lg:rounded-[30px]">
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -47,32 +61,32 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
       <div className="px-5 pt-5">
         <div className="flex items-center gap-3">
-          <Link href={`/u/${p.handle}`} className="flex min-w-0 flex-1 items-center gap-3">
+          <Link href={demo ? "#" : `/u/${p.handle}`} onClick={(e) => demo && e.preventDefault()} className="flex min-w-0 flex-1 items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.avatar} alt="" className="h-11 w-11 rounded-[14px] object-cover" />
             <div className="min-w-0 leading-tight">
               <div className="flex items-center gap-1 text-[15px] font-medium">{p.name}{p.verified && <Verified size={13} />}</div>
-              <div className="text-[12.5px] text-muted">{p.title} · {p.jobs} paid jobs · {f.onTime}% on time</div>
+              <div className="text-[12.5px] text-muted">{p.title}{demo ? " · sample post" : p.jobs ? ` · ${p.jobs} paid jobs · ${f.onTime}% on time` : ""}</div>
             </div>
           </Link>
-          <FollowButton size="sm" />
+          {!demo && <FollowButton size="sm" />}
         </div>
         <div className="mt-5 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-faint"><span>{post.skill}</span><span className="h-[3px] w-[3px] rounded-full bg-faint" /><span>{post.ago}</span></div>
         <p className="mt-2 text-[18px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p>
         <div className="mt-5 flex items-center gap-5 border-y border-line py-3.5 text-[13px] text-muted">
           <button onClick={like} aria-pressed={liked} className="press flex items-center gap-2"><Heart size={20} className={liked ? "fill-current text-fg" : ""} /><Roll value={likes} /></button>
-          <button onClick={() => setTip(true)} className="press flex items-center gap-2"><Coin size={20} /><span>{post.tips} tips</span></button>
+          {!demo && <button onClick={() => setTip(true)} className="press flex items-center gap-2"><Coin size={20} /><span>{post.tips} tips</span></button>}
         </div>
-        <p className="mt-4 text-[13px] leading-relaxed text-faint">Like what you see? Hire {p.name.split(" ")[0]} with an agreement. You fund the escrow, and money is released by the rules you both agree.</p>
+        {demo ? <p className="mt-4 text-[13px] leading-relaxed text-faint">This is a sample post showing what work looks like on Arctisans. Post yours from Create.</p> : <p className="mt-4 text-[13px] leading-relaxed text-faint">Like what you see? Hire {p.name.split(" ")[0]} with an agreement. You fund the escrow, and money is released by the rules you both agree.</p>}
       </div>
 
-      <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8 lg:pb-8">
+      {!demo && <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8 lg:pb-8">
         <div className="flex w-full max-w-[520px] gap-2">
           <button onClick={() => setTip(true)} className="btn btn-ghost">Tip</button>
           <Link href={`/hire/${p.handle}`} className="btn btn-solid flex-1">Hire {p.name.split(" ")[0]}</Link>
         </div>
-      </div>
-      <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} />
+      </div>}
+      <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} to={post.to} postId={demo ? undefined : post.id} />
     </div>
   );
 }

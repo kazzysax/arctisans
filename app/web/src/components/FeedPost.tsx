@@ -2,7 +2,7 @@
 import { useState, ViewTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { people, type Post } from "@/lib/demo";
+import { people, type Post, type Person } from "@/lib/demo";
 import { Heart, Coin, Dots } from "./icons";
 import { Verified } from "./Verified";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
@@ -10,7 +10,7 @@ import { TipSheet } from "./TipSheet";
 
 // "From people you follow": header row, photo with page dots, action row with Tip and Hire.
 export function FeedPost({ post }: { post: Post }) {
-  const p = people[post.by];
+  const p: Person = post.author ?? people[post.by] ?? { handle: post.by, name: post.by, title: "Arctisan", city: "", avatar: "/demo/bg_blue_soft.jpg", kind: "human", jobs: 0, rating: null };
   const r = useRouter();
   const [i, setI] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -21,12 +21,12 @@ export function FeedPost({ post }: { post: Post }) {
   return (
     <article className="overflow-hidden rounded-[28px] hairline bg-bg-2">
       <header className="flex items-center gap-3 p-3.5">
-        <Link href={`/u/${p.handle}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <Link href={post.demo ? "#" : `/u/${p.handle}`} onClick={(e) => post.demo && e.preventDefault()} className="flex min-w-0 flex-1 items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={p.avatar} alt="" className="h-10 w-10 rounded-[13px] object-cover" />
           <div className="min-w-0 leading-tight">
             <div className="flex items-center gap-1 text-[14px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} />}</div>
-            <div className="truncate text-[12px] text-muted">{p.title} · {p.city}</div>
+            <div className="truncate text-[12px] text-muted">{p.title}{post.demo ? " · sample post" : ""}</div>
           </div>
         </Link>
         <span className="text-[12px] text-faint">{post.ago}</span>
@@ -53,14 +53,14 @@ export function FeedPost({ post }: { post: Post }) {
         <button onClick={() => { setLiked(!liked); if (!liked) setBurst((b) => b + 1); }} aria-pressed={liked} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted">
           <Heart key={String(liked)} size={20} className={liked ? "fill-current text-fg" : ""} /> {post.likes + (liked ? 1 : 0)}
         </button>
-        <button onClick={() => setTip(true)} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted"><Coin size={20} /> Tip</button>
+        {!post.demo && <button onClick={() => setTip(true)} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted"><Coin size={20} /> Tip</button>}
         <div className="flex-1" />
-        <Link href={`/hire/${p.handle}`} className="press flex h-9 items-center rounded-full bg-pill px-4 text-[13px] font-medium text-pill-fg">Hire</Link>
+        {!post.demo && <Link href={`/hire/${p.handle}`} className="press flex h-9 items-center rounded-full bg-pill px-4 text-[13px] font-medium text-pill-fg">Hire</Link>}
       </div>
       <p className="px-5 pb-5 pt-2 text-[14px] leading-relaxed text-fg/85">
         <span className="font-medium text-fg">{p.name.split(" ")[0]}</span> {post.caption}
       </p>
-      <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} />
+      <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} to={post.to} postId={post.demo ? undefined : post.id} />
     </article>
   );
 }

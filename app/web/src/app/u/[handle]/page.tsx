@@ -102,7 +102,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   if (!data.ok && data.state === "not-found") notFound();
   if (!data.ok || handle === "me") {
     return (
-      <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
+      <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
         <div className="h-[250px] animate-pulse bg-line" />
         <div className="px-5 pt-4 space-y-3">
           <div className="h-[104px] w-[104px] animate-pulse rounded-[32px] bg-line" />
@@ -134,7 +134,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const skillList = p.skills.map((s) => ({ name: s, jobs: 0 })); // jobs per skill from reputation if needed
 
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
       {/* cover */}
       <div className="relative h-[250px] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}

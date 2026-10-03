@@ -2,7 +2,7 @@
 import { useState, ViewTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { people, type Post } from "@/lib/demo";
+import { people, type Post, type Person } from "@/lib/demo";
 import { Verified } from "./Verified";
 import { FollowButton } from "./fun/FollowButton";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
@@ -10,7 +10,7 @@ import { LikeBurst, useTaps } from "./fun/LikeBurst";
 // Tall portrait card: glass creator chip on top, hairline frame, caption over a soft scrim. Up to 3 photos.
 // Tap: open the post (the photo morphs into it). Double-tap: appreciate. Edge taps: page through pictures.
 export function DiscoverCard({ post }: { post: Post }) {
-  const p = people[post.by];
+  const p: Person = post.author ?? people[post.by] ?? { handle: post.by, name: post.by, title: "Arctisan", city: "", avatar: "/demo/bg_blue_soft.jpg", kind: "human", jobs: 0, rating: null };
   const r = useRouter();
   const [i, setI] = useState(0);
   const [burst, setBurst] = useState(0);
@@ -38,17 +38,17 @@ export function DiscoverCard({ post }: { post: Post }) {
 
       {/* creator chip */}
       <div className="absolute inset-x-3 top-3 z-20 flex items-center gap-2.5 rounded-[20px] border border-white/15 bg-black/35 p-2 pr-2 backdrop-blur-xl">
-        <Link href={`/u/${p.handle}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+        <Link href={post.demo ? "#" : `/u/${p.handle}`} onClick={(e) => post.demo && e.preventDefault()} className="flex min-w-0 flex-1 items-center gap-2.5">
           <ViewTransition name={`avatar-${p.handle}-${post.id}`} share="morph" default="none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.avatar} alt="" className="h-9 w-9 rounded-[12px] object-cover" />
           </ViewTransition>
           <div className="min-w-0 leading-tight text-white">
             <div className="flex items-center gap-1 text-[13px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} onPhoto />}</div>
-            <div className="truncate text-[11px] text-white/60">{p.title} · {p.jobs} jobs</div>
+            <div className="truncate text-[11px] text-white/60">{p.title}{post.demo ? " · sample" : p.jobs ? ` · ${p.jobs} jobs` : ""}</div>
           </div>
         </Link>
-        <FollowButton onPhoto size="sm" />
+        {!post.demo && <FollowButton onPhoto size="sm" />}
       </div>
 
       {/* caption */}

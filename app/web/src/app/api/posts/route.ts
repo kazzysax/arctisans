@@ -15,7 +15,7 @@ export const GET = route("posts", 120, async (req) => {
   let following: string | undefined;
   if (u.searchParams.get("following")) following = requireSession(req).wallet;
   const items = await listFeed({
-    feed, skill: u.searchParams.get("skill") ?? undefined, city: u.searchParams.get("city") ?? undefined,
+    id: u.searchParams.get("id") ?? undefined, feed, skill: u.searchParams.get("skill") ?? undefined, city: u.searchParams.get("city") ?? undefined,
     kind: kind === "human" || kind === "agent" ? kind : undefined, following,
     author: u.searchParams.get("authorHandle") ?? undefined,
     before: Number(u.searchParams.get("before")) || undefined,

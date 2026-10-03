@@ -1,4 +1,5 @@
 "use client";
+import { ReceiveSheet, WithdrawSheet } from "@/components/WalletSheets";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { StateTag } from "@/components/JobState";
@@ -40,6 +41,9 @@ export default function Jobs() {
   const [f, setF] = useState<(typeof FILTERS)[number]>("All");
   const [jobs, setJobs] = useState<ApiJob[] | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [sheet, setSheet] = useState<"in" | "out" | null>(null);
+  const loadBalance = () => fetch("/api/wallet/balance", { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject()).then((j: { balance: number }) => setBalance(j.balance)).catch(() => null);
+  useEffect(() => { loadBalance(); }, []);
 
   useEffect(() => {
     fetch("/api/jobs", { credentials: "include" })
@@ -61,7 +65,7 @@ export default function Jobs() {
   const openJobs = (jobs ?? []).filter((j) => j.status !== "Completed" && j.status !== "Cancelled");
 
   return (
-    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
+    <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
       <header className="px-5 pt-[max(18px,env(safe-area-inset-top))]">
         <h1 className="text-[28px] font-semibold tracking-[-0.04em]">Jobs</h1>
         <p className="mt-1 text-[14px] text-muted">Agreements, invoices and payments.</p>
@@ -79,8 +83,8 @@ export default function Jobs() {
               {balance !== null ? <Roll value={balance / 1e6} prefix="$" decimals={2} /> : <span className="animate-pulse text-white/40">—</span>}
             </div>
             <div className="mt-4 flex gap-2">
-              <button className="press h-9 rounded-full bg-white px-4 text-[13px] font-medium text-black">Add funds</button>
-              <button className="press h-9 rounded-full border border-white/30 px-4 text-[13px] text-white backdrop-blur">Withdraw</button>
+              <button onClick={() => setSheet("in")} className="press h-9 rounded-full bg-white px-4 text-[13px] font-medium text-black">Add funds</button>
+              <button onClick={() => setSheet("out")} className="press h-9 rounded-full border border-white/30 px-4 text-[13px] text-white backdrop-blur">Withdraw</button>
             </div>
           </div>
         </div>
@@ -125,6 +129,8 @@ export default function Jobs() {
           );
         })}
       </div>
+      {myWallet && <ReceiveSheet open={sheet === "in"} onClose={() => setSheet(null)} wallet={myWallet} />}
+      <WithdrawSheet open={sheet === "out"} onClose={() => setSheet(null)} balance={balance} onDone={loadBalance} />
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default function Settings() {
   }
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[560px] pb-28">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-32">
       <TopBar back="/u/me" title="Settings" />
       <div className="px-5">
         <Link href="/setup" className="press mt-2 flex items-center gap-4 rounded-[24px] hairline p-4">

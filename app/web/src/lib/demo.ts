@@ -2,32 +2,37 @@
 export type Person = { handle: string; name: string; title: string; city: string; avatar: string; kind: "human" | "agent"; jobs: number; rating: number | null; verified?: boolean };
 
 export const people: Record<string, Person> = {
-  amara: { handle: "amara", name: "Amara Okafor", title: "Tailor", city: "Lagos", avatar: "/demo/av_49.jpg", kind: "human", jobs: 38, rating: 4.9, verified: true },
-  tobi: { handle: "tobi", name: "Tobi Adeyemi", title: "Architect", city: "Abuja", avatar: "/demo/av_12.jpg", kind: "human", jobs: 21, rating: 4.8, verified: true },
-  lena: { handle: "lena", name: "Lena Moreau", title: "Brand designer", city: "Remote", avatar: "/demo/av_32.jpg", kind: "human", jobs: 54, rating: 5.0 },
-  sami: { handle: "sami", name: "Sami Haddad", title: "Jeweller", city: "Accra", avatar: "/demo/av_60.jpg", kind: "human", jobs: 17, rating: 4.7 },
-  noor: { handle: "noor", name: "Noor Rahman", title: "Writer", city: "Remote", avatar: "/demo/av_47.jpg", kind: "human", jobs: 63, rating: 4.9, verified: true },
-  kai: { handle: "kai", name: "Kai Chen", title: "Illustrator", city: "Remote", avatar: "/demo/av_33.jpg", kind: "human", jobs: 9, rating: 4.6 },
-  eli: { handle: "eli", name: "Eli Brooks", title: "Developer", city: "Remote", avatar: "/demo/av_68.jpg", kind: "human", jobs: 12, rating: 4.8 },
-  ivy: { handle: "ivy", name: "Ivy Laurent", title: "Copywriter", city: "Paris", avatar: "/demo/av_5.jpg", kind: "human", jobs: 28, rating: 4.9 },
+  amara: { handle: "amara", name: "Mira", title: "Writer", city: "Remote", avatar: "/web3/pfp_5.png", kind: "human", jobs: 38, rating: 4.9, verified: true },
+  tobi: { handle: "tobi", name: "Dayo", title: "Developer", city: "Remote", avatar: "/web3/pfp_6.png", kind: "human", jobs: 21, rating: 4.8, verified: true },
+  lena: { handle: "lena", name: "Kenji", title: "Brand designer", city: "Remote", avatar: "/web3/pfp_7.png", kind: "human", jobs: 54, rating: 5.0 },
+  sami: { handle: "sami", name: "pixelsat", title: "NFT artist", city: "Remote", avatar: "/web3/pfp_1.png", kind: "human", jobs: 17, rating: 4.7 },
+  noor: { handle: "noor", name: "Zara", title: "Community manager", city: "Remote", avatar: "/web3/pfp_8.png", kind: "human", jobs: 63, rating: 4.9, verified: true },
+  kai: { handle: "kai", name: "punk42", title: "Illustrator", city: "Remote", avatar: "/web3/pfp_3.png", kind: "human", jobs: 9, rating: 4.6 },
+  eli: { handle: "eli", name: "Ada", title: "Motion designer", city: "Remote", avatar: "/web3/pfp_9.png", kind: "human", jobs: 12, rating: 4.8 },
+  ivy: { handle: "ivy", name: "Nia", title: "Moderator", city: "Remote", avatar: "/web3/pfp_10.png", kind: "human", jobs: 28, rating: 4.9 },
+  vee: { handle: "vee", name: "Vee", title: "Researcher", city: "Remote", avatar: "/web3/pfp_2.png", kind: "human", jobs: 31, rating: 4.9 },
+  ape: { handle: "ape", name: "ape7", title: "Growth", city: "Remote", avatar: "/web3/pfp_4.png", kind: "human", jobs: 14, rating: 4.7 },
+  lux: { handle: "lux", name: "Lux", title: "Translator", city: "Remote", avatar: "/web3/pfp_11.png", kind: "human", jobs: 19, rating: 4.8 },
+  degen: { handle: "degen", name: "degen9", title: "Video editor", city: "Remote", avatar: "/web3/pfp_12.png", kind: "human", jobs: 22, rating: 4.8 },
   atlas: { handle: "atlas", name: "Atlas", title: "Research agent", city: "On Arc", avatar: "/demo/agent_atlas.png", kind: "agent", jobs: 112, rating: 4.8, verified: true },
 };
 
-export type Post = { id: string; by: string; photos: string[]; caption: string; skill: string; likes: number; tips: number; ago: string };
+export type Post = { id: string; by: string; photos: string[]; caption: string; skill: string; likes: number; tips: number; ago: string; author?: Person; demo?: boolean; to?: string };
 
+// Sample posts shown under real ones so the feed never looks empty. Authors are not accounts (no profile, no hire).
 export const discover: Post[] = [
-  { id: "p1", by: "amara", photos: ["/demo/work_ankara.jpg", "/demo/work_tailor.jpg"], caption: "Ankara two-piece, made to measure in 4 days", skill: "Tailoring", likes: 312, tips: 14, ago: "2h" },
-  { id: "p2", by: "tobi", photos: ["/demo/work_arch2.jpg", "/demo/work_arch.jpg"], caption: "Residence concept model, 1:200", skill: "Architecture", likes: 208, tips: 6, ago: "5h" },
-  { id: "p3", by: "sami", photos: ["/demo/work_jewel2.jpg", "/demo/work_jewel.jpg"], caption: "Lapis pendant, hand-set silver", skill: "Jewellery", likes: 177, tips: 9, ago: "1d" },
-  { id: "p4", by: "noor", photos: ["/demo/work_callig.jpg"], caption: "Lettering for a wedding suite", skill: "Writing", likes: 141, tips: 11, ago: "1d" },
+  { id: "p1", by: "lena", photos: ["/web3/post_1.jpg"], caption: "Brand identity for Nova DAO. Mark, wordmark and palette.", skill: "Design", likes: 312, tips: 14, ago: "2h", demo: true },
+  { id: "p2", by: "tobi", photos: ["/web3/post_2.jpg"], caption: "Milestone escrow, audited and 18% cheaper on gas.", skill: "Development", likes: 208, tips: 6, ago: "5h", demo: true },
+  { id: "p3", by: "sami", photos: ["/web3/post_4.jpg"], caption: "Builders, a 100-piece pixel series minted on Arc.", skill: "NFT art", likes: 177, tips: 9, ago: "1d", demo: true },
+  { id: "p4", by: "eli", photos: ["/web3/post_6.jpg"], caption: "Storyboard for a 12s launch teaser.", skill: "Motion", likes: 141, tips: 11, ago: "1d", demo: true },
 ];
 
 export const following: Post[] = [
-  { id: "f1", by: "lena", photos: ["/demo/work_fashion.jpg", "/demo/work_laptop.jpg", "/demo/work_jewel.jpg"], caption: "Collection sheet for a Lagos jewellery label. Three directions, one final.", skill: "Branding", likes: 96, tips: 4, ago: "3h" },
-  { id: "f2", by: "amara", photos: ["/demo/work_tailor.jpg"], caption: "Fitting day. Every seam measured twice.", skill: "Tailoring", likes: 254, tips: 12, ago: "6h" },
+  { id: "f1", by: "amara", photos: ["/web3/post_3.jpg"], caption: "Ghostwrote this thread for a stablecoin team. 48k views in a day.", skill: "Writing", likes: 96, tips: 4, ago: "3h", demo: true },
+  { id: "f2", by: "noor", photos: ["/web3/post_5.jpg"], caption: "Builders Night #14 is Thursday. Bring questions.", skill: "Community", likes: 254, tips: 12, ago: "6h", demo: true },
 ];
 
-export const stories = ["amara", "tobi", "lena", "atlas", "noor", "sami", "kai", "ivy"];
+export const stories = ["amara", "tobi", "lena", "atlas", "noor", "sami", "kai", "ivy", "vee", "degen"];
 export const paidToday = ["lena", "atlas"]; // finished a paid job today (from JobClosed events)
 export const postById = (id: string) => [...discover, ...following].find((p) => p.id === id);
 

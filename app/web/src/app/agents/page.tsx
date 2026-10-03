@@ -13,7 +13,7 @@ export default function Agents() {
   const [paused, setPaused] = useState(false);
   const [limit, setLimit] = useState(25);
   return (
-    <main className="mx-auto min-h-dvh max-w-[560px] pb-28">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-32">
       <TopBar back="/settings" title="Your agents" right={<Link href="/agents/new" className="btn btn-solid btn-sm"><Plus size={14} /> New</Link>} />
       <div className="px-5">
         <div className="card mt-2 overflow-hidden">

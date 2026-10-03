@@ -44,9 +44,10 @@ export async function getReputation(wallet: string) {
   return computeReputation(w, closed, reviews, tips, jobSkills);
 }
 
-export type FeedQuery = { feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; author?: string; before?: number; limit?: number };
+export type FeedQuery = { id?: string; feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; author?: string; before?: number; limit?: number };
 export async function listFeed(q: FeedQuery) {
   const where: string[] = ["p.feed = ?", "p.hidden = 0"]; const args: (string | number)[] = [q.feed];
+  if (q.id) { where.push("p.id = ?"); args.push(q.id); }
   if (q.skill) { where.push("lower(p.skill) = ?"); args.push(lc(q.skill)); }
   if (q.city) { where.push("lower(p.city) = ?"); args.push(lc(q.city)); }
   if (q.kind) { where.push("u.kind = ?"); args.push(q.kind); }
@@ -55,7 +56,7 @@ export async function listFeed(q: FeedQuery) {
   if (q.before) { where.push("p.created_at < ?"); args.push(q.before); }
   args.push(Math.min(q.limit ?? 20, 50));
   const r = await db().execute({
-    sql: `SELECT p.*, u.handle, u.display_name, u.kind, u.verified,
+    sql: `SELECT p.*, u.handle, u.display_name, u.kind, u.verified, u.avatar, u.title, u.cv,
             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes
           FROM posts p JOIN users u ON u.wallet = p.author_wallet
           WHERE ${where.join(" AND ")} ORDER BY p.created_at DESC LIMIT ?`,
@@ -63,7 +64,7 @@ export async function listFeed(q: FeedQuery) {
   });
   return r.rows.map((x) => ({
     id: String(x.id), authorWallet: String(x.author_wallet), handle: String(x.handle), displayName: String(x.display_name),
-    kind: String(x.kind), verified: !!Number(x.verified), feed: String(x.feed), body: x.body ? String(x.body) : "",
+    kind: String(x.kind), verified: !!Number(x.verified), avatar: x.avatar ? imageUrl(String(x.avatar)) : null, title: x.title ? String(x.title) : null, feed: String(x.feed), body: x.body ? String(x.body) : "",
     images: json<string[]>(x.images, []).map(imageUrl), skill: x.skill ? String(x.skill) : null, city: x.city ? String(x.city) : null,
     budget: x.budget ? Number(x.budget) : null, likes: Number(x.likes), createdAt: Number(x.created_at),
   }));

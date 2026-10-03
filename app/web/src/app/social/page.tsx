@@ -9,6 +9,7 @@ import { Bell } from "@/components/icons";
 import { PullToRefresh } from "@/components/fun/PullToRefresh";
 import { CraftArt } from "@/components/CraftArt";
 import { CRAFTS } from "@/lib/crafts";
+import { discover as sampleDiscover, following as sampleFollowing, type Post } from "@/lib/demo";
 
 
 type FeedItem = {
@@ -17,6 +18,9 @@ type FeedItem = {
   displayName: string;
   kind: string;
   verified: boolean;
+  authorWallet?: string;
+  avatar?: string | null;
+  title?: string | null;
   body: string;
   images: string[];
   skill: string | null;
@@ -32,10 +36,12 @@ function ago(ts: number): string {
   return `${Math.floor(diff / 86400)}d`;
 }
 
-function toPost(item: FeedItem) {
+function toPost(item: FeedItem): Post {
   return {
     id: item.id,
     by: item.handle,
+    to: item.authorWallet,
+    author: { handle: item.handle, name: item.displayName, title: item.title ?? "Arctisan", city: "", avatar: item.avatar ?? "/demo/bg_blue_soft.jpg", kind: item.kind === "agent" ? "agent" : "human", jobs: 0, rating: null, verified: item.verified },
     photos: item.images,
     caption: item.body,
     skill: item.skill ?? "",
@@ -88,7 +94,7 @@ export default function Social() {
 
   return (
     <PullToRefresh>
-      <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
+      <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
         {/* top glass panel */}
         <section className="relative z-30 rounded-b-[34px] bg-[var(--img-bg)] px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))] text-[#0b1a29] shadow-[0_18px_40px_-24px_rgba(40,90,140,0.45)]">
           <div className="mb-5 flex items-center justify-between">
@@ -124,11 +130,9 @@ export default function Social() {
           <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Art</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Latest art</SectionTitle>
           {discover === null ? (
             <div className="mt-4"><Skeleton count={3} horizontal /></div>
-          ) : discover.length === 0 ? (
-            <p className="mt-4 px-5 text-[14px] text-muted">No art posted yet. <Link href="/create" className="text-fg underline-offset-4 hover:underline">Post yours</Link>.</p>
           ) : (
             <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
-              {discover.map((item) => <DiscoverCard key={item.id} post={toPost(item)} />)}
+              {[...discover.map(toPost), ...sampleDiscover].map((post) => <DiscoverCard key={post.id} post={post} />)}
             </HScroll>
           )}
         </div>
@@ -139,11 +143,9 @@ export default function Social() {
           <SectionTitle action={<Link href="/search" className="text-[12px] text-muted">See all</Link>}>From people you follow</SectionTitle>
           {following === null ? (
             <div className="mt-4"><Skeleton count={2} /></div>
-          ) : following.length === 0 ? (
-            <p className="mt-4 px-5 text-[14px] text-muted">Follow some people to see their work here.</p>
           ) : (
             <div className="mt-4 flex flex-col gap-4 px-4">
-              {following.map((item) => <FeedPost key={item.id} post={toPost(item)} />)}
+              {[...following.map(toPost), ...sampleFollowing].map((post) => <FeedPost key={post.id} post={post} />)}
             </div>
           )}
         </div>

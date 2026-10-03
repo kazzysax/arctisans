@@ -31,29 +31,29 @@ export function TabBar({ me }: { me?: string | null }) {
 
   const item = (k: string, href: string, label: string, icon: React.ReactNode) => (
     <Link ref={(el) => { refs.current[k] = el; }} href={href} aria-label={label} aria-current={key === k ? "page" : undefined}
-      className={`press relative z-10 grid h-11 w-12 place-items-center transition-colors duration-300 ${key === k ? "text-[#0b1a29]" : "text-muted hover:text-fg"}`}>
+      className={`press relative z-10 grid h-[54px] w-[60px] place-items-center transition-colors duration-300 ${key === k ? "text-[#0b1a29]" : "text-muted hover:text-fg"}`}>
       {icon}
     </Link>
   );
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(14px,env(safe-area-inset-bottom))] pt-8 [background:linear-gradient(to_top,var(--bg)_30%,transparent)] lg:hidden">
-      <div className="glass pointer-events-auto relative flex items-center gap-1 rounded-full p-1.5 shadow-[0_12px_40px_-12px_rgba(15,40,70,0.35)]">
+      <div className="glass pointer-events-auto relative flex items-center gap-1.5 rounded-full p-2 shadow-[0_12px_40px_-12px_rgba(15,40,70,0.35)]">
         {pill && (
-          <span aria-hidden className="tab-liquid absolute top-1.5 h-11 rounded-full"
+          <span aria-hidden className="tab-liquid absolute top-2 h-[54px] rounded-full"
             style={{ left: pill.left, width: pill.width, transform: pill.squash ? "scaleY(.86)" : "none",
               transition: pill.ms ? `left ${pill.ms}ms var(--ease-out), width ${pill.ms}ms ${pill.ms > 300 ? "var(--spring)" : "var(--ease-out)"}, transform ${pill.ms}ms var(--spring)` : "none" }} />
         )}
-        {item("home", "/social", "Home", <Home size={21} />)}
-        {item("search", "/search", "Search", <Search size={21} />)}
-        <Link href="/create" className="press relative z-10 mx-1 flex h-11 items-center gap-1.5 rounded-full bg-pill px-4 text-[14px] font-medium tracking-[-0.01em] text-pill-fg">
-          <Plus size={16} /> Create
+        {item("home", "/social", "Home", <Home size={25} />)}
+        {item("search", "/search", "Search", <Search size={25} />)}
+        <Link href="/create" className="press relative z-10 mx-1 flex h-[54px] items-center gap-2 whitespace-nowrap rounded-full bg-pill px-5 text-[16px] font-medium tracking-[-0.01em] text-pill-fg">
+          <Plus size={19} /> Create
         </Link>
-        {item("jobs", "/jobs", "Jobs", <Briefcase size={21} />)}
-        <Link ref={(el) => { refs.current.me = el; }} href="/u/me" aria-label="Profile" className="press relative z-10 grid h-11 w-12 place-items-center">
+        {item("jobs", "/jobs", "Jobs", <Briefcase size={25} />)}
+        <Link ref={(el) => { refs.current.me = el; }} href="/u/me" aria-label="Profile" className="press relative z-10 grid h-[54px] w-[60px] place-items-center">
           {me ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={me} alt="" className={`h-[28px] w-[28px] rounded-[9px] object-cover ring-[1.5px] transition-shadow ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />
-          ) : <span className={`h-[28px] w-[28px] rounded-[9px] bg-[var(--img-bg)] ring-[1.5px] ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />}
+            <img src={me} alt="" className={`h-[34px] w-[34px] rounded-[11px] object-cover ring-2 transition-shadow ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />
+          ) : <span className={`h-[34px] w-[34px] rounded-[11px] bg-[var(--img-bg)] ring-2 ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />}
         </Link>
       </div>
     </nav>

@@ -23,7 +23,7 @@ export default function CraftPage({ params }: { params: Promise<{ craft: string 
   }, [c]);
   if (!c) notFound();
   return (
-    <main className="mx-auto min-h-dvh max-w-[560px] pb-28">
+    <main className="mx-auto min-h-dvh max-w-[560px] pb-32">
       <div className="relative">
         <div className="h-[230px] px-10 pb-2 pt-14" style={{ background: c.tint }}><CraftArt id={c.id} /></div>
         <div className="absolute left-5 top-[max(16px,env(safe-area-inset-top))]"><Back href="/social" /></div>

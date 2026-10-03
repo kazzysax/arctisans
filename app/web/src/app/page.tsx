@@ -1,2 +1,1 @@
-import { redirect } from "next/navigation";
-export default function Root() { redirect("/signup"); }
+export { default } from "./welcome/page";

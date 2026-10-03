@@ -5,54 +5,55 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Home, Search, Briefcase, Plus } from "./icons";
 import { navKey } from "./shell/routes";
 
-// Floating glass bar. A soft pill glides to the active tab and stretches like liquid on the way (fluidity).
-// Each item keeps a 44px invisible touch area (after:) so the compact bar stays easy to tap.
-const hit = "relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']";
+// Floating glass bar. A light-blue liquid-glass pill glides to the active tab and stretches like liquid on the way.
 type Box = { left: number; width: number };
 
-export function TabBar({ me = "/demo/av_49.jpg" }: { me?: string }) {
+export function TabBar({ me }: { me?: string | null }) {
   const path = usePathname();
   const key = navKey(path);
   const refs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const prev = useRef<Box | null>(null);
-  const [pill, setPill] = useState<(Box & { ms: number }) | null>(null);
+  const [pill, setPill] = useState<(Box & { ms: number; squash: boolean }) | null>(null);
 
   useLayoutEffect(() => {
     const el = key ? refs.current[key] : null;
     if (!el) { prev.current = null; setPill(null); return; }
-    const to = { left: el.offsetLeft - 5, width: el.offsetWidth + 10 };
+    const to = { left: el.offsetLeft, width: el.offsetWidth };
     const from = prev.current;
     prev.current = to;
-    if (!from) { setPill({ ...to, ms: 0 }); return; }
-    // stretch to cover both tabs, then snap onto the new one
+    if (!from) { setPill({ ...to, ms: 0, squash: false }); return; }
+    // stretch across both tabs (a little squashed, like a drop being pulled), then spring onto the new one
     const left = Math.min(from.left, to.left), right = Math.max(from.left + from.width, to.left + to.width);
-    setPill({ left, width: right - left, ms: 170 });
-    const t = setTimeout(() => setPill({ ...to, ms: 380 }), 170);
+    setPill({ left, width: right - left, ms: 200, squash: true });
+    const t = setTimeout(() => setPill({ ...to, ms: 520, squash: false }), 200);
     return () => clearTimeout(t);
   }, [key]);
 
   const item = (k: string, href: string, label: string, icon: React.ReactNode) => (
     <Link ref={(el) => { refs.current[k] = el; }} href={href} aria-label={label} aria-current={key === k ? "page" : undefined}
-      className={`press relative z-10 grid h-[22px] w-[26px] place-items-center ${hit} transition-colors duration-300 ${key === k ? "text-fg" : "text-faint hover:text-muted"}`}>
+      className={`press relative z-10 grid h-11 w-12 place-items-center transition-colors duration-300 ${key === k ? "text-[#0b1a29]" : "text-muted hover:text-fg"}`}>
       {icon}
     </Link>
   );
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(12px,env(safe-area-inset-bottom))] pt-6 [background:linear-gradient(to_top,var(--bg)_25%,transparent)] lg:hidden">
-      <div className="glass pointer-events-auto relative flex items-center gap-1.5 rounded-full px-2.5 py-[3px]">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(14px,env(safe-area-inset-bottom))] pt-8 [background:linear-gradient(to_top,var(--bg)_30%,transparent)] lg:hidden">
+      <div className="glass pointer-events-auto relative flex items-center gap-1 rounded-full p-1.5 shadow-[0_12px_40px_-12px_rgba(15,40,70,0.35)]">
         {pill && (
-          <span aria-hidden className="absolute top-[3px] h-[22px] rounded-full bg-fg/[0.12]"
-            style={{ left: pill.left, width: pill.width, transition: pill.ms ? `left ${pill.ms}ms var(--ease-out), width ${pill.ms}ms ${pill.ms > 200 ? "var(--spring)" : "var(--ease-out)"}` : "none" }} />
+          <span aria-hidden className="tab-liquid absolute top-1.5 h-11 rounded-full"
+            style={{ left: pill.left, width: pill.width, transform: pill.squash ? "scaleY(.86)" : "none",
+              transition: pill.ms ? `left ${pill.ms}ms var(--ease-out), width ${pill.ms}ms ${pill.ms > 300 ? "var(--spring)" : "var(--ease-out)"}, transform ${pill.ms}ms var(--spring)` : "none" }} />
         )}
-        {item("home", "/social", "Home", <Home size={14} />)}
-        {item("search", "/search", "Search", <Search size={14} />)}
-        <Link href="/create" className={`press relative z-10 mx-0.5 flex h-[22px] items-center gap-1 rounded-full bg-pill px-2.5 text-[10.5px] font-medium tracking-[-0.01em] text-pill-fg ${hit}`}>
-          <Plus size={11} /> Create
+        {item("home", "/social", "Home", <Home size={21} />)}
+        {item("search", "/search", "Search", <Search size={21} />)}
+        <Link href="/create" className="press relative z-10 mx-1 flex h-11 items-center gap-1.5 rounded-full bg-pill px-4 text-[14px] font-medium tracking-[-0.01em] text-pill-fg">
+          <Plus size={16} /> Create
         </Link>
-        {item("jobs", "/jobs", "Jobs", <Briefcase size={14} />)}
-        <Link ref={(el) => { refs.current.me = el; }} href="/u/me" aria-label="Profile" className={`press relative z-10 grid h-[22px] w-[26px] place-items-center ${hit}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={me} alt="" className={`h-[16px] w-[16px] rounded-[5px] object-cover ring-1 transition-shadow ${key === "me" ? "ring-fg" : "ring-line-strong"}`} />
+        {item("jobs", "/jobs", "Jobs", <Briefcase size={21} />)}
+        <Link ref={(el) => { refs.current.me = el; }} href="/u/me" aria-label="Profile" className="press relative z-10 grid h-11 w-12 place-items-center">
+          {me ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={me} alt="" className={`h-[28px] w-[28px] rounded-[9px] object-cover ring-[1.5px] transition-shadow ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />
+          ) : <span className={`h-[28px] w-[28px] rounded-[9px] bg-[var(--img-bg)] ring-[1.5px] ${key === "me" ? "ring-[#0b1a29]" : "ring-line-strong"}`} />}
         </Link>
       </div>
     </nav>

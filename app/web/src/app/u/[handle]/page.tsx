@@ -1,7 +1,9 @@
 "use client";
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound, useSearchParams } from "next/navigation";
+import { notFound, useSearchParams, useRouter } from "next/navigation";
+import { Mark } from "@/components/Logo";
+import { craftById } from "@/lib/crafts";
 import { BadgePin } from "@/components/BadgePin";
 import { Sheet } from "@/components/ui";
 import type { Badge } from "@/lib/badges";
@@ -14,7 +16,18 @@ import { Verified } from "@/components/Verified";
 import { Coin, Dots } from "@/components/icons";
 import { useAuth } from "@/hooks/useAuth";
 
-const TABS = ["Work", "CV", "Badges", "Reviews"] as const;
+const TABS = ["Art", "CV", "Badges", "Reviews"] as const;
+const AVAIL: Record<string, string> = { open: "Open to work", limited: "Limited availability", booked: "Booked" };
+const iconKind = (label: string) => { const l = label.toLowerCase(); return l === "website" || l === "portfolio" || l === "behance" || l === "telegram" ? "web" : l; };
+function CvSection({ n, t, children }: { n: string; t: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6">
+      <h3 className="flex items-baseline gap-2.5 text-[10.5px] uppercase tracking-[0.22em] text-black/45"><span className="num text-black">{n}</span>{t}<span className="h-px flex-1 translate-y-[-3px] bg-black/10" /></h3>
+      <div className="mt-2.5">{children}</div>
+    </section>
+  );
+}
+const Missing = () => <p className="text-[12.5px] italic text-black/35">Not added yet</p>;
 
 type Profile = {
   wallet: string;
@@ -29,8 +42,10 @@ type Profile = {
   links: { label: string; url: string }[];
   city: string | null;
   avatar: string | null;
+  cover?: string | null;
   verified: boolean;
   createdAt: number;
+  cv?: { craft?: string; years?: string; rate?: number; delivery?: string; availability?: string; tools?: string[]; clients?: string[]; portfolio?: { img: string; caption?: string }[] };
 };
 
 type Level = { level: 1 | 2 | 3; name: string; upfrontPct: number };
@@ -52,7 +67,9 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const { handle: raw } = use(params);
   const auth = useAuth();
   const sp = useSearchParams();
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Work");
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Art");
+  const [menu, setMenu] = useState(false);
+  const router = useRouter();
   const [tip, setTip] = useState(false);
   const [card, setCard] = useState(false);
   const [badge, setBadge] = useState<Badge | null>(null);
@@ -99,7 +116,19 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
   const mine = raw === "me" || (auth.status === "in" && auth.profile.wallet === p.wallet) || sp.get("new") === "1";
   const earned = badges.filter((b) => b.earned);
   const avg = rep.ratingAvg ? rep.ratingAvg.toFixed(1) : "New";
-  const coverSrc = posts[0]?.images[0] ?? "/demo/bg_blue.jpg";
+  const coverSrc = p.cover ?? "/demo/bg_blue.jpg";
+  const cv = p.cv ?? {};
+  const craftName = craftById(cv.craft)?.one ?? null;
+  async function share() {
+    const url = `${location.origin}/u/${p.handle}`;
+    if (navigator.share) await navigator.share({ title: `${p.displayName} · Arctisans CV`, url }).catch(() => null);
+    else await navigator.clipboard.writeText(url).catch(() => null);
+  }
+  async function logOut() {
+    await fetch("/api/auth/circle", { method: "DELETE", credentials: "include" });
+    await auth.refresh?.();
+    router.replace("/signup");
+  }
   const scope = p.scope ? p.scope.split("\n").filter(Boolean) : [];
   const skillList = p.skills.map((s) => ({ name: s, jobs: 0 })); // jobs per skill from reputation if needed
 
@@ -108,11 +137,11 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
       {/* cover */}
       <div className="relative h-[250px] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={coverSrc} alt="" className={`h-full w-full object-cover ${p.kind === "agent" ? "" : "grayscale"} opacity-90`} />
+        <img src={coverSrc} alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[var(--bg)]" />
         <div className="absolute inset-x-5 top-[max(16px,env(safe-area-inset-top))] flex items-center justify-between">
           <Back href="/social" />
-          {mine ? <Link href="/setup" className="press glass flex h-9 items-center rounded-full px-4 text-[13px] text-fg">Edit profile</Link>
+          {mine ? <div className="flex items-center gap-2"><Link href="/setup" className="press glass flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-fg">Edit profile</Link><button onClick={() => setMenu(true)} aria-label="Account" className="press glass grid h-10 w-10 place-items-center rounded-full text-fg"><Dots size={18} /></button></div>
                 : <button aria-label="More" className="press glass grid h-10 w-10 place-items-center rounded-full text-fg"><Dots size={18} /></button>}
         </div>
       </div>
@@ -131,7 +160,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}</h1>
-            <div className="mt-0.5 text-[14px] text-muted">@{p.handle}{p.title ? ` · ${p.title}` : ""}{p.city ? ` · ${p.city}` : ""}</div>
+            <div className="mt-0.5 text-[14px] text-muted">@{p.handle}{p.title ? ` · ${p.title}` : ""}</div>
           </div>
           {!mine && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
@@ -147,8 +176,8 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-4 text-muted">
-          {p.links.map((l) => <a key={l.label} href={l.url} target="_blank" rel="noreferrer" aria-label={l.label} className="press hover:text-fg"><SocialIcon kind={l.label.toLowerCase() as "linkedin" | "x" | "instagram" | "tiktok" | "github" | "web"} /></a>)}
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-muted">
+          {p.links.map((l) => <a key={l.label} href={l.url} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1.5 rounded-full hairline px-3 py-1.5 text-[12.5px] hover:text-fg"><SocialIcon kind={iconKind(l.label)} size={14} />{l.label}</a>)}
         </div>
         {p.bio && <p className="mt-4 text-[14.5px] leading-relaxed text-fg/80">{p.bio}</p>}
 
@@ -167,7 +196,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           {earned.length > 0 && (
             <div className="flex items-center gap-2 border-t border-line px-4 py-3">
               <div className="flex -space-x-2">{earned.slice(0, 5).map((b) => <span key={b.id} className="rounded-full ring-2 ring-[var(--bg)]"><BadgePin id={b.id} earned size={28} /></span>)}</div>
-              <span className="text-[12.5px] text-muted">{earned.length} badges</span>
+              <span className="text-[12.5px] text-muted">{earned.length} {earned.length === 1 ? "badge" : "badges"}</span>
               <span className="flex-1" />
               <span className="text-[12px] text-faint">View card →</span>
             </div>
@@ -191,9 +220,9 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         </div>
 
         <div key={tab} className="rise mt-5" style={{ animationDuration: "420ms" }}>
-          {tab === "Work" && (
+          {tab === "Art" && (
             <div className="grid grid-cols-3 gap-1.5">
-              {posts.length === 0 && <p className="col-span-3 py-8 text-center text-[14px] text-muted">No work posted yet.</p>}
+              {posts.length === 0 && <p className="col-span-3 py-8 text-center text-[14px] text-muted">No art posted yet.</p>}
               {posts.flatMap((p) => p.images).slice(0, 9).map((src, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img key={i} src={src} alt="" className={`w-full rounded-[14px] object-cover ${i === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square"}`} />
@@ -202,32 +231,67 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           )}
 
           {tab === "CV" && (
-            <div className="flex flex-col gap-7">
-              {p.bio && <section><h2 className="text-[15px] font-medium">Biography</h2><p className="mt-2 text-[14px] leading-relaxed text-muted">{p.bio}</p></section>}
-              {scope.length > 0 && (
-                <section>
-                  <h2 className="text-[15px] font-medium">Scope of work</h2>
-                  <ul className="mt-3 flex flex-col">
-                    {scope.map((s, i) => <li key={s} className={`flex items-center gap-3 py-3 text-[14px] ${i ? "border-t border-line" : ""}`}><span className="num w-5 text-[12px] text-faint">{String(i + 1).padStart(2, "0")}</span>{s}</li>)}
-                  </ul>
-                </section>
+            <article className="cv-sheet relative overflow-hidden rounded-[6px] bg-white px-6 pb-6 pt-7 text-[#111] shadow-[0_1px_0_rgba(0,0,0,0.04),0_18px_50px_-20px_rgba(15,34,54,0.35)] ring-1 ring-black/[0.06]">
+              {/* letterhead */}
+              <header className="flex items-start gap-4">
+                {p.avatar ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={p.avatar} alt="" className="h-[68px] w-[68px] rounded-[14px] object-cover" />)
+                  : <div className="h-[68px] w-[68px] rounded-[14px] bg-[var(--img-bg)]" />}
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-serif text-[27px] font-medium leading-[1.05] tracking-[0.01em]">{p.displayName}</h2>
+                  <div className="mt-1 text-[13px] text-black/60">{p.title ?? craftName}</div>
+                  <div className="mt-1 text-[12px] text-black/45">@{p.handle}{cv.availability ? ` · ${AVAIL[cv.availability] ?? ""}` : ""}</div>
+                </div>
+                <Mark size={30} className="shrink-0 text-black/80" />
+              </header>
+              <div className="mt-5 h-px bg-black/80" /><div className="mt-[3px] h-px bg-black/15" />
+              {/* quick facts */}
+              <dl className="mt-4 grid grid-cols-3 gap-3 text-[11.5px]">
+                {[["Craft", craftName ?? "—"], ["Experience", cv.years ? `${cv.years} yrs` : "—"], ["Rate", cv.rate ? `from $${cv.rate}` : "—"]].map(([k, v]) => (
+                  <div key={k}><dt className="text-[9.5px] uppercase tracking-[0.18em] text-black/40">{k}</dt><dd className="mt-1 font-medium leading-tight">{v}</dd></div>
+                ))}
+              </dl>
+              <CvSection n="01" t="Profile">{p.bio ? <p className="text-[13.5px] leading-relaxed text-black/75">{p.bio}</p> : <Missing />}</CvSection>
+              <CvSection n="02" t="Scope of work">
+                {scope.length ? <ul className="grid grid-cols-1 gap-1.5 text-[13.5px]">{scope.map((x) => <li key={x} className="flex gap-2.5"><span className="mt-[7px] h-[3px] w-[3px] shrink-0 rounded-full bg-black" />{x}</li>)}</ul> : <Missing />}
+                {cv.delivery && <p className="mt-2.5 text-[12px] text-black/50">Usual delivery: {cv.delivery}</p>}
+              </CvSection>
+              {(cv.portfolio?.length ?? 0) > 0 && (
+                <CvSection n="03" t="Selected work">
+                  <div className="grid grid-cols-3 gap-2">{cv.portfolio!.map((w) => (
+                    <figure key={w.img}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={w.img} alt="" className="aspect-square w-full rounded-[6px] bg-[var(--img-bg)] object-cover" />
+                      {w.caption && <figcaption className="mt-1 text-[10.5px] leading-tight text-black/55">{w.caption}</figcaption>}</figure>))}</div>
+                </CvSection>
               )}
-              {skillList.length > 0 && (
-                <section>
-                  <h2 className="text-[15px] font-medium">Skills</h2>
-                  <div className="mt-3 flex flex-wrap gap-2">{skillList.map((s) => <span key={s.name} className="rounded-full hairline px-3 py-1.5 text-[13px]">{s.name}</span>)}</div>
-                </section>
-              )}
-              <section>
-                <h2 className="text-[15px] font-medium">Record on Arc</h2>
-                <div className="mt-3 overflow-hidden rounded-[20px] hairline">
-                  {[["Unique clients", rep.uniqueClients], ["Tips received", `$${(rep.tipsReceived / 1e6).toFixed(2)}`], ["Settled by agreement", rep.settled], ["Deadlocks", rep.deadlocked], ["Member since", new Date(p.createdAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" })]].map(([k, v], i) => (
-                    <div key={String(k)} className={`flex justify-between px-4 py-3.5 text-[14px] ${i ? "border-t border-line" : ""}`}><span className="text-muted">{k}</span><span className="num">{v}</span></div>
+              <CvSection n={(cv.portfolio?.length ?? 0) > 0 ? "04" : "03"} t="Skills & tools">
+                {(cv.tools?.length ?? 0) > 0 ? <p className="text-[13px] leading-relaxed text-black/75">{cv.tools!.join("  ·  ")}</p> : <Missing />}
+                {(cv.clients?.length ?? 0) > 0 && <p className="mt-2 text-[12px] text-black/55"><span className="text-black/40">Worked with </span>{cv.clients!.join(", ")}</p>}
+              </CvSection>
+              <CvSection n={(cv.portfolio?.length ?? 0) > 0 ? "05" : "04"} t="Record on Arc">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-2.5 py-1 text-[10.5px] uppercase tracking-[0.14em]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--img-bg)] ring-1 ring-black/30" />Verified on Arc</span>
+                  <span className="num text-[10.5px] text-black/40">{p.wallet.slice(0, 6)}…{p.wallet.slice(-4)}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-6 text-[12.5px]">
+                  {[["Paid jobs", rep.completed], ["Rating", rep.ratingAvg ? `${rep.ratingAvg.toFixed(1)} ★` : null], ["On time", rep.onTimeRate !== null ? `${Math.round(rep.onTimeRate * 100)}%` : null], ["Earned", rep.earned ? `$${(rep.earned / 1e6).toLocaleString()}` : null],
+                    ["Clients", rep.uniqueClients], ["Tips", rep.tipsReceived ? `$${(rep.tipsReceived / 1e6).toFixed(2)}` : null], ["Settled", rep.settled], ["Deadlocks", rep.deadlocked]].map(([k, v]) => (
+                    <div key={String(k)} className="flex justify-between border-b border-dotted border-black/15 py-1.5"><span className="text-black/50">{k}</span><span className="num">{v ? v : "—"}</span></div>
                   ))}
                 </div>
-                <p className="mt-3 text-[12px] leading-relaxed text-faint">Every number here comes from paid jobs and payments on Arc. Nothing is self-reported.</p>
-              </section>
-            </div>
+              </CvSection>
+              {p.links.length > 0 && (
+                <div className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-[11.5px] text-black/60">
+                  {p.links.map((l) => <a key={l.label} href={l.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-black"><SocialIcon kind={iconKind(l.label)} size={13} />{l.label}</a>)}
+                </div>
+              )}
+              <footer className="mt-6 flex items-center justify-between border-t border-black/10 pt-3 text-[9.5px] uppercase tracking-[0.16em] text-black/40">
+                <span>arctisans.vercel.app/u/{p.handle}</span>
+                <span>Issued {new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" })} · Page 1 of 1</span>
+              </footer>
+              <div className="no-print mt-5 flex gap-2">
+                <button onClick={() => window.print()} className="btn btn-ghost flex-1 !border-black/15 !text-black">Download PDF</button>
+                <button onClick={share} className="btn flex-1 bg-black text-white">Share CV</button>
+              </div>
+            </article>
           )}
 
           {tab === "Badges" && (
@@ -270,6 +334,16 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           )}
         </div>
       </div>
+
+      {/* Account menu */}
+      <Sheet open={menu} onClose={() => setMenu(false)} title="Account">
+        <div className="flex flex-col">
+          <Link href="/setup" className="press border-b border-line py-4 text-[15px]">Edit profile</Link>
+          <Link href="/settings" className="press border-b border-line py-4 text-[15px]">Settings</Link>
+          <button onClick={share} className="press border-b border-line py-4 text-left text-[15px]">Share my CV</button>
+          <button onClick={logOut} className="press py-4 text-left text-[15px] text-red-600">Log out</button>
+        </div>
+      </Sheet>
 
       {/* Badge detail sheet */}
       <Sheet open={!!badge} onClose={() => setBadge(null)}>

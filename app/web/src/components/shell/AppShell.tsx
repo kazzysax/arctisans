@@ -10,23 +10,25 @@ import { AuthCtx, useAuthState } from "@/hooks/useAuth";
 export function AppShell({ children, aside }: { children: React.ReactNode; aside: React.ReactNode }) {
   const p = usePathname();
   const r = useRouter();
-  const [auth, setAuth] = useAuthState();
+  const [auth, refresh] = useAuthState();
+  const ctx = { ...auth, refresh };
 
-  // Auth guard: redirect logged-out users away from protected screens.
+  // Auth guard. Signed out -> sign in. Signed in without a CV -> setup. Signed in on the intro -> home.
+  // The status may be stale (it was read before signing in), so check again before sending anyone away.
   useEffect(() => {
-    if (auth.status === "loading") return;
-    if (auth.status === "out" && !isBare(p)) {
-      r.replace("/signup");
-    }
-    // After signing in, if on setup and already have a profile, go to their CV.
-    if (auth.status === "in" && p === "/welcome") {
-      r.replace(`/u/${auth.profile.handle}`);
-    }
-  }, [auth.status, p, r, auth]);
+    if (auth.status === "loading" || auth.status === "in" || isBare(p)) return;
+    let live = true;
+    refresh().then((s) => {
+      if (!live) return;
+      if (s.status === "out") r.replace("/signup");
+      if (s.status === "new") r.replace("/setup");
+    });
+    return () => { live = false; };
+  }, [auth.status, p, r, refresh]);
 
   if (isBare(p)) {
     return (
-      <AuthCtx.Provider value={auth}>
+      <AuthCtx.Provider value={ctx}>
         {children}
       </AuthCtx.Provider>
     );
@@ -34,16 +36,16 @@ export function AppShell({ children, aside }: { children: React.ReactNode; aside
 
   // Still loading auth → render nothing to avoid flash of wrong screen
   if (auth.status === "loading") return null;
-  if (auth.status === "out") return null;
+  if (auth.status === "out" || auth.status === "new") return null;
 
   const a = hasAside(p);
   return (
-    <AuthCtx.Provider value={auth}>
+    <AuthCtx.Provider value={ctx}>
       <div className={`has-rail ${a ? "has-aside" : ""}`}>
         <SideNav />
         <main className="pl-[var(--rail)] pr-[var(--aside)]">{children}</main>
         {a && aside}
-        {hasTabs(p) && <TabBar />}
+        {hasTabs(p) && <TabBar me={auth.status === "in" ? auth.profile.avatar : null} />}
       </div>
     </AuthCtx.Provider>
   );

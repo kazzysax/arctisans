@@ -3,7 +3,7 @@ import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { processImages, storeImage } from "@/lib/images";
 
-/** Upload / replace the authenticated user's avatar. Accepts multipart with field "file". */
+/** Upload / replace the signed-in user's avatar, or their cover photo with ?slot=cover. Multipart field "file". */
 export const POST = route("avatar-upload", 10, async (req) => {
   const { wallet } = requireSession(req);
   const form = await req.formData();
@@ -12,6 +12,7 @@ export const POST = route("avatar-upload", 10, async (req) => {
   const buf = Buffer.from(await file.arrayBuffer());
   const [processed] = await processImages([buf]);
   const ref = await storeImage(processed);
-  await db().execute({ sql: "UPDATE users SET avatar=? WHERE wallet=?", args: [ref, wallet] });
-  return ok({ avatar: ref });
+  const cover = new URL(req.url).searchParams.get("slot") === "cover";
+  await db().execute({ sql: `UPDATE users SET ${cover ? "cover" : "avatar"}=? WHERE wallet=?`, args: [ref, wallet] });
+  return ok({ [cover ? "cover" : "avatar"]: ref });
 });

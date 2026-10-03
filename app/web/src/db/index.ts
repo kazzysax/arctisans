@@ -70,5 +70,9 @@ let migrated = false;
 export async function migrate(c: Client = db()) {
   if (migrated && c === _db) return;
   await c.executeMultiple(SCHEMA);
+  // additive columns (older databases): ignore 'duplicate column' errors
+  for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE users ADD COLUMN cover TEXT"]) {
+    try { await c.execute(sql); } catch { /* already there */ }
+  }
   if (c === _db) migrated = true;
 }

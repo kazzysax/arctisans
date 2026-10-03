@@ -1,6 +1,7 @@
 "use client";
 import { useRef } from "react";
-/** Double-tap reward: the Arctisans arc pops in light blue with a ring of sparks. Purely decorative. */
+import { LEAF_OUTLINE, LEAF_STEM, LEAF_VEINS } from "../Logo";
+/** Double-tap reward: the Arctisans leaf pops in light blue with a ring of sparks. Purely decorative. */
 export function LikeBurst({ k }: { k: number }) {
   if (!k) return null;
   return (
@@ -11,8 +12,11 @@ export function LikeBurst({ k }: { k: number }) {
             style={{ ["--a" as string]: `${i * 45}deg`, animation: "spark 700ms var(--ease-out) both", animationDelay: "90ms" }} />
         ))}
         <svg width="92" height="92" viewBox="0 0 32 32" style={{ animation: "arcPop 900ms var(--ease-out) both", filter: "drop-shadow(0 6px 18px rgba(80,140,200,.55))" }} aria-hidden>
-          <path d="M7 22a9 9 0 0 1 18 0" fill="none" stroke="var(--img-bg)" strokeWidth={3.4} strokeLinecap="round" />
-          <circle cx="16" cy="22" r="3.2" fill="var(--img-bg)" />
+          <g transform="translate(16 16) scale(.13) translate(0 -2)" stroke="var(--img-bg)" strokeLinecap="round" strokeLinejoin="round">
+            <path d={LEAF_OUTLINE} fill="var(--img-bg)" fillOpacity={0.35} strokeWidth="11" />
+            <path d={LEAF_VEINS} fill="none" strokeWidth="7" />
+            <path d={LEAF_STEM} strokeWidth="13" />
+          </g>
         </svg>
       </div>
     </div>

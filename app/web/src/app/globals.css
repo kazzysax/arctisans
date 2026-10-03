@@ -152,3 +152,63 @@ textarea.field { height:auto; padding:14px 16px; line-height:1.5; resize:none; }
 @media (min-width: 1280px) { .has-aside { --aside: 340px; } }
 .sheet-panel { animation: sheet 380ms var(--ease-out) both; }
 @media (min-width: 1024px) { .sheet-panel { animation: rise 380ms var(--ease-out) both; } }
+
+/* craft illustrations (Discover / setup) */
+.craft-art .ca-write { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ca-draw 3.2s var(--ease-out) infinite; }
+.craft-art .ca-type { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ca-draw 2.4s steps(6) infinite; }
+.craft-art .ca-pen { animation: ca-pen 3.2s ease-in-out infinite; }
+.craft-art .ca-caret, .craft-art .ca-flash { animation: ca-blink 1.1s steps(2) infinite; }
+.craft-art .ca-spin { animation: ca-spin 6s linear infinite; }
+.craft-art .ca-pulse { transform-box: fill-box; transform-origin: center; animation: ca-pulse 1.8s ease-in-out infinite; }
+.craft-art .ca-focus { transform-box: fill-box; transform-origin: center; animation: ca-pulse 2.4s ease-in-out infinite; }
+.craft-art .ca-scrub { animation: ca-scrub 3s linear infinite; }
+.craft-art .ca-stitch { animation: ca-stitch 1.2s linear infinite; }
+.craft-art .ca-needle { animation: ca-needle 1.2s ease-in-out infinite; }
+.craft-art .ca-bob { animation: ca-bob 2.2s ease-in-out infinite; }
+.craft-art .ca-bob2 { animation: ca-bob 2.2s ease-in-out .5s infinite; }
+.craft-art .ca-bar1, .craft-art .ca-bar2, .craft-art .ca-bar3 { transform-box: fill-box; transform-origin: bottom; animation: ca-grow 2.6s var(--ease-out) infinite; }
+.craft-art .ca-bar2 { animation-delay: .15s; } .craft-art .ca-bar3 { animation-delay: .3s; }
+.craft-art .ca-glass { animation: ca-glass 3.4s ease-in-out infinite; }
+.craft-art .ca-blink { transform-box: fill-box; transform-origin: center; animation: ca-eyes 3.6s ease-in-out infinite; }
+@keyframes ca-draw { 0% { stroke-dashoffset: 1; } 55%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+@keyframes ca-pen { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-6px, 6px); } }
+@keyframes ca-blink { 50% { opacity: 0; } }
+@keyframes ca-spin { to { transform: rotate(360deg); } }
+@keyframes ca-pulse { 50% { transform: scale(1.18); opacity: .75; } }
+@keyframes ca-scrub { from { transform: translateX(0); } to { transform: translateX(62px); } }
+@keyframes ca-stitch { to { stroke-dashoffset: -18; } }
+@keyframes ca-needle { 50% { transform: translate(-5px, 5px); } }
+@keyframes ca-bob { 50% { transform: translateY(-5px); } }
+@keyframes ca-grow { 0% { transform: scaleY(.2); } 45%, 80% { transform: scaleY(1); } 100% { transform: scaleY(.2); } }
+@keyframes ca-glass { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-30px, 10px); } }
+@keyframes ca-eyes { 0%, 44%, 52%, 100% { transform: scaleY(1); } 48% { transform: scaleY(.1); } }
+@media (prefers-reduced-motion: reduce) { .craft-art * { animation: none !important; } }
+
+/* leaf loader: the logo draws itself */
+.leaf-loader path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.leaf-auto .ll-out { animation: ll-draw 2.4s var(--ease-out) infinite; }
+.leaf-auto .ll-vein { animation: ll-draw 2.4s var(--ease-out) .35s infinite; }
+.leaf-auto .ll-stem { animation: ll-draw 2.4s var(--ease-out) .6s infinite; }
+.leaf-auto { animation: ll-breathe 2.4s ease-in-out infinite; }
+@keyframes ll-draw { 0% { stroke-dashoffset: 1; } 50%, 78% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+@keyframes ll-breathe { 0%, 100% { transform: scale(.94); } 60% { transform: scale(1.04); } }
+.leaf-done path { stroke-dashoffset: 0 !important; animation: none !important; }
+.leaf-done { animation: ll-pop 700ms var(--spring) both; }
+@keyframes ll-pop { 0% { transform: scale(.8) rotate(-8deg); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .leaf-loader path { stroke-dashoffset: 0 !important; animation: none !important; } .leaf-auto { animation: none; } }
+
+/* tab bar: light-blue liquid glass selection */
+.tab-liquid {
+  background: linear-gradient(180deg, rgba(225,239,250,.95), rgba(176,210,238,.85));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 6px rgba(40,100,160,.18), 0 4px 14px -4px rgba(90,150,210,.55);
+  backdrop-filter: blur(10px) saturate(1.6); -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  transform-origin: center;
+}
+
+/* CV printout: Download PDF prints only the CV sheet */
+@media print {
+  body * { visibility: hidden !important; }
+  .cv-sheet, .cv-sheet * { visibility: visible !important; }
+  .cv-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; box-shadow: none !important; }
+  .no-print { display: none !important; }
+}

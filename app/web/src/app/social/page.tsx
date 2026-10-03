@@ -7,6 +7,8 @@ import { HScroll } from "@/components/HScroll";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Bell } from "@/components/icons";
 import { PullToRefresh } from "@/components/fun/PullToRefresh";
+import { CraftArt } from "@/components/CraftArt";
+import { CRAFTS } from "@/lib/crafts";
 
 
 type FeedItem = {
@@ -88,15 +90,15 @@ export default function Social() {
     <PullToRefresh>
       <div className="relative mx-auto min-h-dvh max-w-[560px] pb-24">
         {/* top glass panel */}
-        <section className="glass relative z-30 rounded-b-[34px] border-t-0 px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))]">
+        <section className="relative z-30 rounded-b-[34px] bg-[var(--img-bg)] px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))] text-[#0b1a29] shadow-[0_18px_40px_-24px_rgba(40,90,140,0.45)]">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-faint">Arctisans</div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-[#0b1a29]/55">Arctisans</div>
               <h1 className="mt-0.5 text-[26px] font-semibold tracking-[-0.035em]">Socials</h1>
             </div>
             <div className="flex items-center gap-2 lg:hidden">
-              <ThemeToggle />
-              <Link href="/notifications" aria-label="Notifications" className="press relative grid h-10 w-10 place-items-center rounded-full hairline text-muted">
+              <ThemeToggle className="border border-[#0b1a29]/15 bg-white/40 text-[#0b1a29]" />
+              <Link href="/notifications" aria-label="Notifications" className="press relative grid h-10 w-10 place-items-center rounded-full border border-[#0b1a29]/15 bg-white/40 text-[#0b1a29]">
                 <Bell size={19} />
                 {unread > 0 && <span className="absolute right-[10px] top-[9px] h-[7px] w-[7px] rounded-full bg-fg ring-2 ring-[var(--bg)]" />}
               </Link>
@@ -105,11 +107,25 @@ export default function Social() {
         </section>
 
         <div className="pt-7">
-          <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Work</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Discover</SectionTitle>
+          <SectionTitle action={<Link href="/search" className="text-[12px] text-muted">Search</Link>}>Discover</SectionTitle>
+          <p className="mt-1 px-5 text-[13px] text-muted">Find people by craft.</p>
+          <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
+            {CRAFTS.map((c, i) => (
+              <Link key={c.id} href={`/discover/${c.id}`} className="press rise group w-[168px] shrink-0 snap-start" style={{ animationDelay: `${i * 50}ms` }}>
+                <div className="aspect-[4/3] overflow-hidden rounded-[22px] bg-[var(--img-bg)] p-2 transition-transform duration-500 group-hover:scale-[1.02]"><CraftArt id={c.id} /></div>
+                <div className="mt-2.5 px-1 text-[14.5px] font-medium tracking-[-0.01em]">{c.name}</div>
+                <div className="px-1 text-[12px] leading-snug text-muted">{c.blurb}</div>
+              </Link>
+            ))}
+          </HScroll>
+        </div>
+
+        <div className="pt-8">
+          <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Art</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Latest art</SectionTitle>
           {discover === null ? (
             <div className="mt-4"><Skeleton count={3} horizontal /></div>
           ) : discover.length === 0 ? (
-            <p className="mt-4 px-5 text-[14px] text-muted">No work posts yet. <Link href="/create" className="text-fg underline-offset-4 hover:underline">Post yours</Link>.</p>
+            <p className="mt-4 px-5 text-[14px] text-muted">No art posted yet. <Link href="/create" className="text-fg underline-offset-4 hover:underline">Post yours</Link>.</p>
           ) : (
             <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
               {discover.map((item) => <DiscoverCard key={item.id} post={toPost(item)} />)}

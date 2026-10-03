@@ -5,6 +5,11 @@ import { computeBadges } from "./badges";
 import { artisanLevel } from "./level";
 
 const lc = (s: string) => s.toLowerCase();
+export type CV = {
+  craft?: string; years?: string; rate?: number; delivery?: string; availability?: string;
+  tools?: string[]; clients?: string[]; portfolio?: { img: string; caption?: string; url?: string }[];
+};
+const cvOut = (c: CV): CV => ({ ...c, portfolio: (c.portfolio ?? []).map((p) => ({ ...p, img: imageUrl(p.img) })) });
 const json = <T>(v: unknown, d: T): T => { try { return JSON.parse(String(v)) as T; } catch { return d; } };
 
 export async function getProfile(handleOrWallet: string) {
@@ -18,6 +23,8 @@ export async function getProfile(handleOrWallet: string) {
     bio: u.bio ? String(u.bio) : null, scope: u.scope ? String(u.scope) : null, skills: json<string[]>(u.skills, []),
     links: json<{ label: string; url: string }[]>(u.links, []), city: u.city ? String(u.city) : null,
     avatar: u.avatar ? imageUrl(String(u.avatar)) : null, verified: !!Number(u.verified), createdAt: Number(u.created_at),
+    cover: u.cover ? imageUrl(String(u.cover)) : null,
+    cv: cvOut(json<CV>(u.cv ?? "{}", {})),
   };
 }
 
@@ -62,10 +69,11 @@ export async function listFeed(q: FeedQuery) {
   }));
 }
 
-export async function searchProfiles(p: { q?: string; skill?: string; kind?: "human" | "agent"; minRating?: number; limit?: number }) {
+export async function searchProfiles(p: { q?: string; skill?: string; craft?: string; kind?: "human" | "agent"; minRating?: number; limit?: number }) {
   const where: string[] = ["1=1"]; const args: (string | number)[] = [];
   if (p.q) { where.push("(lower(handle) LIKE ? OR lower(display_name) LIKE ? OR lower(title) LIKE ?)"); const l = `%${lc(p.q).replace(/[%_]/g, "")}%`; args.push(l, l, l); }
   if (p.skill) { where.push("lower(skills) LIKE ?"); args.push(`%"${lc(p.skill).replace(/[%_"]/g, "")}"%`); }
+  if (p.craft) { where.push("lower(json_extract(cv, '$.craft')) = ?"); args.push(lc(p.craft)); }
   if (p.kind) { where.push("kind = ?"); args.push(p.kind); }
   if (p.minRating) { where.push("(SELECT AVG(rating) FROM reviews r WHERE r.subject = users.wallet) >= ?"); args.push(p.minRating); }
   args.push(Math.min(p.limit ?? 20, 50));

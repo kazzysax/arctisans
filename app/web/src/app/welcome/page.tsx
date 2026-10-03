@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LogoTile } from "@/components/Logo";
 import { people } from "@/lib/demo";
+import { useAuth } from "@/hooks/useAuth";
 
 // Welcome: the logo tile at the centre of two faint rings, community avatars placed on the rings (reference), slow orbit.
 const ring = (n: number, r: number, offset: number) => Array.from({ length: n }, (_, i) => {
@@ -12,6 +13,7 @@ const ring = (n: number, r: number, offset: number) => Array.from({ length: n },
 
 export default function Welcome() {
   const ps = Object.values(people);
+  const auth = useAuth();
   const inner = ring(4, 104, 0.5), outer = ring(6, 170, 0.15);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   useEffect(() => {
@@ -43,8 +45,8 @@ export default function Welcome() {
       <div className="rise text-center" style={{ animationDelay: "500ms" }}>
         <h1 className="text-[34px] font-semibold leading-[1.08] tracking-[-0.04em]">Welcome to<br />Arctisans</h1>
         <p className="mx-auto mt-3 max-w-[300px] text-[15px] leading-relaxed text-white/55">People and agents who make things, in one place. Show your work and get paid for it.</p>
-        <Link href="/setup" className="press mt-8 flex h-[54px] w-full items-center justify-center rounded-full bg-white text-[16px] font-medium text-black">Enter</Link>
-        <p className="mt-4 text-[12px] text-white/35">Takes about a minute to set up your CV</p>
+        <Link href={auth.status === "in" ? "/social" : auth.status === "new" ? "/setup" : "/signup"} className="press mt-8 flex h-[54px] w-full items-center justify-center rounded-full bg-white text-[16px] font-medium text-black">Enter</Link>
+        <p className="mt-4 text-[12px] text-white/35">Sign in with email or Google</p>
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mark } from "@/components/Logo";
-import { circleReady, signInWithEmail, finishLogin } from "@/lib/walletClient";
+import { circleReady, signInWithEmail, finishLogin, googleReady, startGoogleSignIn, googlePending, resumeGoogleLogin } from "@/lib/walletClient";
 
 // Sign-up: full-bleed dewy macro photo tinted light blue, a solid square block with spaced serif capitals (reference),
 // and the email / Google sign-in under it.
@@ -38,10 +38,30 @@ export default function SignUp() {
     }
   }
 
-  function handleGoogle() {
+  // Coming back from Google: finish the sign-in the same way as the email code.
+  useEffect(() => {
+    if (!googlePending()) return;
+    let live = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- show the busy state while the Google result is read
+    setLoading(true);
+    (async () => {
+      try {
+        const login = await resumeGoogleLogin();
+        if (!login) return;
+        const { hasProfile } = await finishLogin(login);
+        r.push(hasProfile ? "/social" : "/setup");
+      } catch (e) { if (live) setError((e as Error).message); }
+      finally { if (live) setLoading(false); }
+    })();
+    return () => { live = false; };
+  }, [r]);
+
+  async function handleGoogle() {
     setError(null);
     if (!hasCircle) { r.push("/setup"); return; }
-    setError("Google sign-in is coming next. Please use your email for now.");
+    if (!googleReady()) { setError("Google sign-in is not set up yet. Please use your email."); return; }
+    setLoading(true);
+    try { await startGoogleSignIn(); } catch (e) { setError((e as Error).message); setLoading(false); }
   }
 
   return (

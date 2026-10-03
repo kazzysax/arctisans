@@ -5,6 +5,13 @@ import type { W3SSdk as Sdk } from "@circle-fin/w3s-pw-web-sdk";
 
 export const CIRCLE_APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID ?? "";
 export const circleReady = () => !!CIRCLE_APP_ID;
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+export const googleReady = () => !!GOOGLE_CLIENT_ID;
+// Google sends the browser away and back. These tokens survive the round trip in this tab, and the page it returns to.
+const G_KEY = "arc_google_pending";
+const G_RETURN = "/signup";
+const googleCfg = () => ({ clientId: GOOGLE_CLIENT_ID, redirectUri: `${location.origin}${G_RETURN}`, selectAccountPrompt: true });
+const pendingGoogle = (): { deviceToken: string; deviceEncryptionKey: string } | null => { try { return JSON.parse(sessionStorage.getItem(G_KEY) ?? "null"); } catch { return null; } };
 
 type Login = { userToken: string; encryptionKey: string };
 const KEY = "arc_circle_login";
@@ -19,7 +26,8 @@ export const clearLogin = () => { try { sessionStorage.removeItem(KEY); } catch 
 async function getSdk(): Promise<Sdk> {
   if (sdk) return sdk;
   const { W3SSdk } = await import("@circle-fin/w3s-pw-web-sdk");
-  sdk = new W3SSdk({ appSettings: { appId: CIRCLE_APP_ID } }, (error: unknown, result: unknown) => {
+  const g = googleReady() ? pendingGoogle() : null;
+  sdk = new W3SSdk({ appSettings: { appId: CIRCLE_APP_ID }, ...(g ? { loginConfigs: { ...g, google: googleCfg() } } : {}) }, (error: unknown, result: unknown) => {
     if (!error && result) sessionStorage.setItem(KEY, JSON.stringify(result));
     onLogin?.(error, result as Login | undefined);
   });
@@ -43,6 +51,29 @@ export async function signInWithEmail(email: string): Promise<Login> {
     s.updateConfigs({ appSettings: { appId: CIRCLE_APP_ID }, loginConfigs: { deviceToken: t.deviceToken, deviceEncryptionKey: t.deviceEncryptionKey, otpToken: t.otpToken } });
     s.verifyOtp();
   });
+}
+
+/** Opens Google. The page leaves and comes back to /signup, where resumeGoogleLogin() picks up the result. */
+export async function startGoogleSignIn(): Promise<void> {
+  if (!googleReady()) throw new Error("Google sign-in is not set up yet");
+  const s = await getSdk();
+  const deviceId = await s.getDeviceId();
+  const t = await post<{ deviceToken: string; deviceEncryptionKey: string }>("/api/wallet/social", { deviceId });
+  sessionStorage.setItem(G_KEY, JSON.stringify(t));
+  s.updateConfigs({ appSettings: { appId: CIRCLE_APP_ID }, loginConfigs: { ...t, google: googleCfg() } });
+  const { SocialLoginProvider } = await import("@circle-fin/w3s-pw-web-sdk/dist/src/types");
+  await s.performLogin(SocialLoginProvider.GOOGLE);
+}
+export const googlePending = () => typeof window !== "undefined" && googleReady() && !!pendingGoogle();
+/** After Google sends the user back: resolves with the login, or null if they came back without finishing. */
+export async function resumeGoogleLogin(): Promise<Login | null> {
+  if (!pendingGoogle()) return null;
+  const done = new Promise<Login | null>((resolve, reject) => {
+    onLogin = (e, r) => (e || !r ? reject(new Error((e as Error)?.message ?? "Google sign-in was cancelled")) : resolve(r));
+    setTimeout(() => resolve(null), 20000);
+  });
+  await getSdk();
+  try { return await done; } finally { sessionStorage.removeItem(G_KEY); }
 }
 
 /** Run a Circle challenge (create wallet, or approve a transaction) in Circle's secure window. */

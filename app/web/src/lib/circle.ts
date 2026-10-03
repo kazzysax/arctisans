@@ -31,6 +31,10 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; us
 export const requestEmailOtp = (deviceId: string, email: string) =>
   call<{ deviceToken: string; deviceEncryptionKey: string; otpToken: string }>("/users/email/token", { body: { idempotencyKey: crypto.randomUUID(), deviceId, email } });
 
+/** Step 1 of Google sign-in: Circle returns the device tokens the browser SDK needs before it redirects to Google. */
+export const requestSocialToken = (deviceId: string) =>
+  call<{ deviceToken: string; deviceEncryptionKey: string }>("/users/social/token", { body: { idempotencyKey: crypto.randomUUID(), deviceId } });
+
 /** First sign-in only: returns a challenge the user approves in Circle's hosted UI to create their wallet. */
 export const initializeUser = (userToken: string) =>
   call<{ challengeId: string }>("/user/initialize", { userToken, body: { idempotencyKey: crypto.randomUUID(), accountType: "SCA", blockchains: [circleChain()] } });

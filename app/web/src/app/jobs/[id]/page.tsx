@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TopBar, Sheet } from "@/components/ui";
 import { StateTag } from "@/components/JobState";
 import { PaidStamp } from "@/components/fun/PaidStamp";
+import { PaidCelebration } from "@/components/fun/PaidCelebration";
 import { Roll } from "@/components/fun/Roll";
 import { Check, Plus } from "@/components/icons";
 import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
@@ -36,6 +37,16 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
   const [stars, setStars] = useState(5);
   const [note, setNote] = useState("");
   const [now] = useState(() => Date.now());
+  const [party, setParty] = useState(false);
+  // The Arctisan sees "You got paid!" once, the first time they open a job that has paid out.
+  useEffect(() => {
+    if (!j || j.me !== "artisan" || j.released <= 0 || !["Completed", "Settled"].includes(j.status)) return;
+    const k = `arc_paid_${j.id}`;
+    if (localStorage.getItem(k)) return;
+    localStorage.setItem(k, "1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time celebration when a payout is first seen
+    setParty(true);
+  }, [j]);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/jobs/${id}`, { credentials: "include" });
@@ -226,6 +237,9 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
         {err && <p className="mt-3 text-[13px]">{err}</p>}
         <button disabled={!!busy} onClick={() => act("deliver", { action: "deliver", note })} className="btn btn-solid mt-4 w-full">{busy ? "Waiting for approval…" : "Deliver"}</button>
       </Sheet>
+
+      {party && <PaidCelebration amount={money(j.released)} from={j.client.handle ? `@${j.client.handle}` : j.client.name} title={j.terms.title}
+        onKudos={() => { setParty(false); setSheet("review"); }} onClose={() => setParty(false)} />}
 
       <Sheet open={sheet === "update"} onClose={() => setSheet(null)} title="Post an update">
         <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} className="field" placeholder="Where are you with the work?" />

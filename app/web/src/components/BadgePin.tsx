@@ -17,10 +17,17 @@ const G: Record<BadgeId, React.ReactNode> = {
   pro: <><path d="M12 6.5l5 2v3.5c0 3-2.2 5-5 6-2.8-1-5-3-5-6V8.5z" /><path d="M9.8 12.2l1.6 1.6 2.9-3" /></>,
 };
 
+// Each earned badge gets its own soft enamel colour.
+const TINT: Record<BadgeId, string> = {
+  "first-job": "#F4E6BC", verified: "#D2E4F2", "on-time-10": "#D3EADC", "five-star-streak": "#F7DFAE",
+  "clean-record": "#CFE7E8", "tipped-10": "#F4D8C8", "hires-agents": "#DED7F1", "repeat-client": "#F1D6E0",
+  early: "#cfe3f3", "earned-1k": "#E2E7CC", trusted: "#D8DDF0", pro: "#E6D3F0",
+};
+
 export function BadgePin({ id, earned, size = 52 }: { id: BadgeId; earned: boolean; size?: number }) {
   return (
     <span className="relative grid shrink-0 place-items-center rounded-full" style={{ width: size, height: size }}>
-      <span className={`absolute inset-0 rounded-full ${earned ? "bg-[var(--img-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-2px_6px_rgba(20,60,100,0.25),0_6px_18px_-6px_rgba(120,170,215,0.55)]" : "border border-dashed border-line-strong"}`} />
+      <span className={`absolute inset-0 rounded-full ${earned ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-2px_6px_rgba(20,40,70,0.18),0_6px_16px_-6px_rgba(40,60,90,0.35)]" : "border border-dashed border-line-strong"}`} style={earned ? { background: TINT[id] } : undefined} />
       {earned && <span className="absolute inset-[3px] rounded-full border border-black/15" />}
       <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
         className={`relative ${earned ? "text-[#0b1a29]" : "text-faint"}`} aria-hidden>{G[id]}</svg>

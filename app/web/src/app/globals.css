@@ -212,3 +212,11 @@ textarea.field { height:auto; padding:14px 16px; line-height:1.5; resize:none; }
   .cv-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; box-shadow: none !important; }
   .no-print { display: none !important; }
 }
+
+/* craft sticker: tilted, wiggles on tap */
+.craft-sticker { transform: rotate(-8deg); transition: transform 300ms var(--spring); }
+.craft-sticker:active, .craft-sticker:hover { transform: rotate(6deg) scale(1.12); }
+.craft-sticker .craft-art { stroke-width: 3px; }
+/* paid celebration */
+@keyframes confetti { 0% { transform: translate3d(0,-20px,0) rotate(0); opacity: 1; } 100% { transform: translate3d(var(--dx), 105dvh, 0) rotate(var(--r)); opacity: 1; } }
+@keyframes paidIn { 0% { transform: scale(.6) rotate(-14deg); opacity: 0; } 60% { transform: scale(1.06) rotate(-4deg); opacity: 1; } 100% { transform: scale(1) rotate(-6deg); } }

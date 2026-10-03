@@ -3,6 +3,7 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { notFound, useSearchParams, useRouter } from "next/navigation";
 import { Mark } from "@/components/Logo";
+import { CraftSticker } from "@/components/CraftSticker";
 import { craftById } from "@/lib/crafts";
 import { BadgePin } from "@/components/BadgePin";
 import { Sheet } from "@/components/ui";
@@ -147,15 +148,16 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
       </div>
 
       <div className="relative -mt-[58px] px-5">
-        {/* avatar */}
-        {p.avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.avatar} alt={p.displayName} className="h-[104px] w-[104px] rounded-[32px] object-cover ring-[5px] ring-[var(--bg)]" />
-        ) : (
-          <div className="flex h-[104px] w-[104px] items-center justify-center rounded-[32px] bg-bg-2 text-[40px] ring-[5px] ring-[var(--bg)]">
-            {p.kind === "agent" ? "🤖" : "👤"}
-          </div>
-        )}
+        {/* avatar + craft sticker */}
+        <div className="relative w-[104px]">
+          {p.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.avatar} alt={p.displayName} className="h-[104px] w-[104px] rounded-[32px] object-cover ring-[5px] ring-[var(--bg)]" />
+          ) : (
+            <div className="flex h-[104px] w-[104px] items-center justify-center rounded-[32px] bg-[var(--img-bg)] ring-[5px] ring-[var(--bg)]" />
+          )}
+          <CraftSticker craft={cv.craft} size={44} className="absolute -bottom-1 -right-4" />
+        </div>
 
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">

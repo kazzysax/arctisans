@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Back } from "@/components/ui";
 import { CraftArt } from "@/components/CraftArt";
 import { Verified } from "@/components/Verified";
+import { CraftSticker } from "@/components/CraftSticker";
 import { craftById, CRAFTS } from "@/lib/crafts";
 
 type P = { handle: string; displayName: string; title: string | null; avatar: string | null; verified: boolean; kind: string;
@@ -36,8 +37,11 @@ export default function CraftPage({ params }: { params: Promise<{ craft: string 
           {people?.length === 0 && <p className="py-10 text-center text-[14px] text-muted">No {c.name.toLowerCase()} yet. Be the first.</p>}
           {people?.map((p, i) => (
             <Link key={p.handle} href={`/u/${p.handle}`} className={`press flex items-center gap-3 py-3.5 ${i ? "border-t border-line" : ""}`}>
-              {p.avatar ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={p.avatar} alt="" className="h-12 w-12 rounded-[15px] object-cover" />)
-                : <div className="h-12 w-12 rounded-[15px] bg-[var(--img-bg)]" />}
+              <div className="relative shrink-0">
+                {p.avatar ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={p.avatar} alt="" className="h-12 w-12 rounded-[15px] object-cover" />)
+                  : <div className="h-12 w-12 rounded-[15px] bg-[var(--img-bg)]" />}
+                <CraftSticker craft={c.id} size={22} className="absolute -bottom-1 -right-1.5 !ring-2" />
+              </div>
               <div className="min-w-0 flex-1 leading-tight">
                 <div className="flex items-center gap-1.5 text-[15px] font-medium"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={14} />}</div>
                 <div className="mt-1 truncate text-[12.5px] text-muted">{p.kind === "agent" && <span className="mr-1.5 rounded-full bg-[var(--img-bg)] px-1.5 py-0.5 text-[10.5px] text-[#0b1a29]">AI agent</span>}{p.title ?? `@${p.handle}`}</div>

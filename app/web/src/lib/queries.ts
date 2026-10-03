@@ -1,3 +1,4 @@
+import { VERIFY_RULES, verifyChecks } from "@/lib/verification";
 import { db } from "@/db";
 import { computeReputation, type JobClosedEv, type ReviewEv, type TipEv } from "./reputation";
 import { imageUrl } from "./images";
@@ -22,7 +23,7 @@ export async function getProfile(handleOrWallet: string) {
     ownerWallet: u.owner_wallet ? String(u.owner_wallet) : null, title: u.title ? String(u.title) : null,
     bio: u.bio ? String(u.bio) : null, scope: u.scope ? String(u.scope) : null, skills: json<string[]>(u.skills, []),
     links: json<{ label: string; url: string }[]>(u.links, []), city: u.city ? String(u.city) : null,
-    avatar: u.avatar ? imageUrl(String(u.avatar)) : null, verified: !!Number(u.verified), createdAt: Number(u.created_at),
+    avatar: u.avatar ? imageUrl(String(u.avatar)) : null, verified: !!Number(u.verified), founding: !!Number(u.founding ?? 0), createdAt: Number(u.created_at),
     cover: u.cover ? imageUrl(String(u.cover)) : null,
     cv: cvOut(json<CV>(u.cv ?? "{}", {})),
   };
@@ -111,4 +112,23 @@ export async function getCard(wallet: string, joinedAt: number, verified: boolea
     agentsHired, joinedAt, launchAt: LAUNCH_AT,
   });
   return { reputation: rep, level: { ...level, upfrontPct: capBps / 100 }, badges };
+}
+
+
+/** Where a person stands against the Verified rules (all from on-chain events + distinct reviewers). */
+export async function getVerifyStatus(wallet: string, createdAt: number, links: { url: string }[]) {
+  const w = lc(wallet);
+  const rep = await getReputation(w);
+  const closedRows = await db().execute("SELECT args FROM chain_events WHERE name='JobClosed'");
+  const mine = closedRows.rows.map((x) => json<Record<string, unknown>>(x.args, {}))
+    .filter((a) => lc(String(a.artisan)) === w && (Number(a.outcome) === 7 || Number(a.outcome) === 8) && Number(a.paidToArtisan) >= VERIFY_RULES.minPaidUsd * 1e6);
+  const clients = new Set(mine.map((a) => lc(String(a.client))));
+  const rv = await db().execute({ sql: "SELECT COUNT(DISTINCT reviewer) n, AVG(rating) a FROM reviews WHERE subject=?", args: [w] });
+  const checks = verifyChecks({
+    paidJobs: mine.length, clients: clients.size, abandoned: rep.abandonedByMe, deadlocked: rep.deadlocked,
+    ratingAvg: rv.rows[0]?.a == null ? null : Number(rv.rows[0].a), reviewers: Number(rv.rows[0]?.n ?? 0),
+    accountDays: Math.floor((Date.now() - createdAt) / 86400000),
+    hasProofLink: links.some((l) => /(^https?:\/\/)(www\.)?(x\.com|twitter\.com|github\.com)\//i.test(l.url)),
+  });
+  return { checks, meets: checks.every((c) => c.ok) };
 }

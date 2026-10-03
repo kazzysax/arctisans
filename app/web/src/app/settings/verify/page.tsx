@@ -1,16 +1,26 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TopBar } from "@/components/ui";
-import { SocialIcon } from "@/components/Social";
 import { Check } from "@/components/icons";
 
-// Verification: prove you own a public account by posting a one-time code from it. Unlocks the Verified badge,
-// which (with your job record) opens the path to upfront payments.
-const CODE = "arc-7Q4K-M2";
+type Check = { key: string; label: string; ok: boolean; detail: string };
+type Status = { checks: Check[]; meets: boolean; verified: boolean; founding: boolean; requested: boolean };
+
+// Verified = honour and trust. Earned by record, never bought. The team reviews once every rule is met.
 export default function Verify() {
-  const [kind, setKind] = useState<"x" | "github" | null>(null);
-  const [step, setStep] = useState<"pick" | "post" | "checking" | "done">("pick");
-  const [copied, setCopied] = useState(false);
+  const [s, setS] = useState<Status | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => fetch("/api/verify").then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "Could not load"); setS(j); }).catch((e) => setErr((e as Error).message));
+  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  async function request() {
+    setBusy(true); setErr(null);
+    const r = await fetch("/api/verify", { method: "POST" }); const j = await r.json();
+    if (!r.ok) setErr(j.error ?? "Could not send"); else await load();
+    setBusy(false);
+  }
+  const done = s?.checks.filter((c) => c.ok).length ?? 0;
   return (
     <main className="mx-auto min-h-dvh max-w-[520px] pb-16">
       <TopBar back="/settings" title="Get verified" />
@@ -20,51 +30,39 @@ export default function Verify() {
           <img src="/demo/bg_blue.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-white/45" />
           <div className="relative flex flex-col items-center px-6 py-9 text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-black text-white" style={{ animation: step === "done" ? "sealIn 700ms var(--spring) both" : undefined }}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21l-2.4-1.8-3-.1-.9-2.9-2.4-1.8.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z" />{step === "done" && <path d="M8.5 12.2l2.4 2.4 4.6-4.8" />}</svg>
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-black text-white">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21l-2.4-1.8-3-.1-.9-2.9-2.4-1.8.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z" /><path d="m8.6 12.2 2.4 2.4 4.4-4.6" /></svg>
             </span>
-            <div className="mt-4 font-serif text-[22px] uppercase tracking-[0.18em] text-black">{step === "done" ? "Verified" : "Verification"}</div>
-            <p className="mt-2 max-w-[280px] text-[13px] leading-relaxed text-black/75">{step === "done" ? "Your badge is live. Upfront payments unlock at Trusted: 5 paid jobs for 3 different clients." : "Prove a public account is yours. It takes a minute and never asks for a password."}</p>
+            <div className="mt-4 font-serif text-[22px] uppercase tracking-[0.18em] text-black">{s?.verified ? "Verified" : "Verification"}</div>
+            <p className="mt-2 max-w-[290px] text-[13px] leading-relaxed text-black/75">
+              {s?.verified ? "You are trusted on Arctisans. Keep your record clean: abandoning a job removes the seal." : "Verified is honour and trust. It is earned by your record, never bought, and it is lost if you abandon a job."}
+            </p>
           </div>
         </div>
 
-        {step === "pick" && (
-          <div className="rise mt-6 flex flex-col gap-3">
-            {([["x", "X (Twitter)", "Post a short tweet with your code"], ["github", "GitHub", "Create a public gist with your code"]] as const).map(([k, t, d]) => (
-              <button key={k} onClick={() => { setKind(k); setStep("post"); }} className="press flex items-center gap-4 rounded-[22px] hairline p-4 text-left">
-                <span className="grid h-11 w-11 place-items-center rounded-[14px] hairline"><SocialIcon kind={k} /></span>
-                <div className="flex-1 leading-tight"><div className="text-[15px] font-medium">{t}</div><div className="mt-1 text-[12.5px] text-muted">{d}</div></div>
-                <span className="text-faint">→</span>
-              </button>
-            ))}
-          </div>
-        )}
+        {s?.founding && <div className="mt-4 rounded-[18px] bg-[var(--img-bg)] px-4 py-3 text-[13px]">🌱 You are a <b>Founding member</b>, hand-picked by the team. This is a separate mark from Verified.</div>}
 
-        {(step === "post" || step === "checking") && (
+        {s && (
           <div className="rise mt-6">
-            <div className="label">1 · Copy your code</div>
-            <button onClick={() => { navigator.clipboard?.writeText(CODE); setCopied(true); }} className="press mt-2 flex w-full items-center justify-between rounded-[18px] hairline-strong px-4 py-4">
-              <span className="num font-mono text-[20px] tracking-[0.08em]">{CODE}</span><span className="text-[12px] text-muted">{copied ? "Copied" : "Copy"}</span>
-            </button>
-            <div className="label mt-6">2 · {kind === "x" ? "Post it from your X account" : "Put it in a public gist"}</div>
-            <a href={kind === "x" ? `https://x.com/intent/post?text=${encodeURIComponent(`Verifying my Arctisans profile: ${CODE}`)}` : "https://gist.github.com"} target="_blank" rel="noreferrer" className="btn btn-ghost mt-2 w-full">{kind === "x" ? "Open X" : "Open GitHub Gist"}</a>
-            <div className="label mt-6">3 · Paste the link</div>
-            <input className="field mt-2" placeholder={kind === "x" ? "https://x.com/you/status/…" : "https://gist.github.com/you/…"} />
-            <button onClick={() => { setStep("checking"); setTimeout(() => setStep("done"), 1400); }} className="btn btn-solid mt-5 w-full">{step === "checking" ? <span className="inline-flex items-center gap-2"><span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent" style={{ animation: "spin .8s linear infinite" }} />Checking</span> : "Check"}</button>
-          </div>
-        )}
-
-        {step === "done" && (
-          <div className="rise mt-6">
-            {[["Verified", true], ["5 paid jobs", false], ["3 different clients", false], ["Never abandoned a job", true]].map(([t, ok]) => (
-              <div key={String(t)} className="flex items-center gap-3 border-b border-line py-3.5 text-[14px]">
-                <span className={`grid h-6 w-6 place-items-center rounded-full ${ok ? "bg-fg text-[var(--bg)]" : "border border-dashed border-line-strong"}`}>{ok && <Check size={13} />}</span>
-                <span className={ok ? "" : "text-muted"}>{String(t)}</span>
+            <div className="label">Your record · {done} of {s.checks.length}</div>
+            {s.checks.map((c) => (
+              <div key={c.key} className="flex items-center gap-3 border-b border-line py-3.5 text-[14px]">
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${c.ok ? "bg-fg text-[var(--bg)]" : "border border-dashed border-line-strong"}`}>{c.ok && <Check size={13} />}</span>
+                <span className={`flex-1 ${c.ok ? "" : "text-muted"}`}>{c.label}</span>
+                <span className="num text-[12px] text-faint">{c.detail}</span>
               </div>
             ))}
-            <p className="mt-3 text-[12px] text-faint">Trusted unlocks up to 30% upfront. Pro (20 jobs, 10 clients) unlocks 50%.</p>
+            {!s.checks.find((c) => c.key === "identity")?.ok && <Link href="/setup?edit=1" className="mt-3 block text-[13px] underline">Add your X or GitHub link →</Link>}
+            <p className="mt-4 text-[12px] leading-relaxed text-faint">Ratings count only when they come from at least 3 different people, so one friend can&apos;t carry you. When every rule is met, the team reviews your profile and grants the seal by hand.</p>
+            {s.verified ? null : s.requested ? (
+              <div className="btn btn-ghost mt-5 w-full opacity-70">Sent. The team will review you.</div>
+            ) : (
+              <button disabled={!s.meets || busy} onClick={request} className="btn btn-solid mt-5 w-full disabled:opacity-40">{s.meets ? "Ask the team to review me" : "Meet every rule to ask for review"}</button>
+            )}
           </div>
         )}
+        {err && <p className="mt-4 text-center text-[13px] text-red-500">{err}</p>}
+        {!s && !err && <p className="mt-8 text-center text-[13px] text-faint">Loading…</p>}
       </div>
     </main>
   );

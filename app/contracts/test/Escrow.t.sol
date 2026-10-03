@@ -276,6 +276,20 @@ contract EscrowTest is Test {
         assertEq(e.upfrontCapBps(n), 0);
         _grind(n, 30, 15); assertEq(e.upfrontCapBps(n), 0);
     }
+    function test_abandoningRemovesVerified() public {
+        address n = address(0xAB); e.setVerified(n, true); _grind(n, 5, 3);
+        (, , , bool v0) = e.records(n); assertTrue(v0);
+        uint96[] memory m = new uint96[](1); m[0] = 10e6;
+        vm.prank(c); uint256 id = e.propose(c, n, "t", 0, m, uint64(block.timestamp + 7 days), 0, ArctisanEscrow.DeadlockRule.Split5050);
+        vm.prank(n); e.agree(id, "t"); u.mint(c, 10e6); vm.startPrank(c); u.approve(address(e), 10e6); e.fund(id, "t"); vm.stopPrank();
+        vm.prank(n); e.start(id); vm.warp(block.timestamp + 3 days + 1); e.poke(id);
+        (, , , bool v1) = e.records(n); assertFalse(v1);
+    }
+    function test_teamCanVerifyAnyone_nonVerifierCannot() public {
+        address n = address(0xAC);
+        vm.prank(address(0xBAD)); vm.expectRevert(); e.setVerified(n, true);
+        e.setVerified(n, true); (, , , bool v) = e.records(n); assertTrue(v); // team (verifier) may grant by hand
+    }
     function test_unverifyBlocksFunding() public {
         address n = address(0xA9); e.setVerified(n, true); _grind(n, 5, 3);
         assertTrue(_propose(n, 3e6, 7e6));

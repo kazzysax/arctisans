@@ -45,6 +45,7 @@ type Profile = {
   avatar: string | null;
   cover?: string | null;
   verified: boolean;
+  founding?: boolean;
   createdAt: number;
   cv?: { craft?: string; years?: string; rate?: number; delivery?: string; availability?: string; tools?: string[]; clients?: string[]; portfolio?: { img: string; caption?: string }[] };
 };
@@ -161,7 +162,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
 
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}</h1>
+            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}{!p.verified && p.founding && <span title="Founding member" className="rounded-full bg-[var(--img-bg)] px-2 py-[2px] text-[10.5px] font-medium tracking-wide">🌱 Founding</span>}</h1>
             <div className="mt-0.5 text-[14px] text-muted">@{p.handle}{p.title ? ` · ${p.title}` : ""}</div>
           </div>
           {!mine && (

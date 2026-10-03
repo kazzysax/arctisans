@@ -54,7 +54,11 @@ export async function applyEvent(contract: "escrow" | "social", ev: Ev, meta: { 
       case "Released": await notify(a.to, "payment_released", { jobId: Number(a.jobId), net: Number(a.net) }); break;
       case "SettlementOpened": await setStatus(a.jobId, "Settlement"); await notifyParty(a.jobId, "client", "settlement_opened"); await notifyParty(a.jobId, "artisan", "settlement_opened"); break;
       case "SplitOffered": await notifyParty(a.jobId, lc(a.by) === (await partyOf(a.jobId, "client")) ? "artisan" : "client", "split_offered"); break;
-      case "JobClosed": await setStatus(a.jobId, STATUS[Number(a.outcome)] ?? "Closed"); break;
+      case "JobClosed":
+        await setStatus(a.jobId, STATUS[Number(a.outcome)] ?? "Closed");
+        // Verified means trusted: abandoning a job removes it, whoever granted it.
+        if (Number(a.outcome) === 10 && a.artisan) await db().execute({ sql: "UPDATE users SET verified=0 WHERE wallet=?", args: [String(a.artisan).toLowerCase()] });
+        break;
     }
   } else if (ev.name === "Tipped") {
     await db().execute({ sql: "INSERT OR IGNORE INTO tips(id,from_wallet,to_wallet,post_hash,amount,ts) VALUES(?,?,?,?,?,?)", args: [id, lc(a.from), lc(a.to), a.postHash, Number(a.amount), meta.ts] });

@@ -250,7 +250,7 @@ export default function Setup() {
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             {CRAFTS.map((c) => (
               <button key={c.id} onClick={() => { if (craft !== c.id) setScope([]); setCraft(c.id); }} className={`press overflow-hidden rounded-[18px] border text-left transition-colors ${craft === c.id ? "border-fg" : "border-line"}`}>
-                <div className="h-[64px] bg-[var(--img-bg)] px-6 py-1"><CraftArt id={c.id} /></div>
+                <div className="h-[64px] px-6 py-1" style={{ background: c.tint }}><CraftArt id={c.id} /></div>
                 <div className="px-3 py-2 text-[13px] font-medium leading-tight">{c.one}</div>
               </button>
             ))}

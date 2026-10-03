@@ -24,7 +24,7 @@ export default function CraftPage({ params }: { params: Promise<{ craft: string 
   return (
     <main className="mx-auto min-h-dvh max-w-[560px] pb-28">
       <div className="relative">
-        <div className="h-[230px] bg-[var(--img-bg)] px-10 pb-2 pt-14"><CraftArt id={c.id} /></div>
+        <div className="h-[230px] px-10 pb-2 pt-14" style={{ background: c.tint }}><CraftArt id={c.id} /></div>
         <div className="absolute left-5 top-[max(16px,env(safe-area-inset-top))]"><Back href="/social" /></div>
       </div>
       <div className="px-5 pt-5">
@@ -50,7 +50,7 @@ export default function CraftPage({ params }: { params: Promise<{ craft: string 
           ))}
         </div>
         <div className="mt-10 eyebrow">Other crafts</div>
-        <div className="mt-3 flex flex-wrap gap-2">{CRAFTS.filter((x) => x.id !== c.id).map((x) => <Link key={x.id} href={`/discover/${x.id}`} className="chip press">{x.name}</Link>)}</div>
+        <div className="mt-3 flex flex-wrap gap-2">{CRAFTS.filter((x) => x.id !== c.id).map((x) => <Link key={x.id} href={`/discover/${x.id}`} className="chip press !border-transparent !text-[#0b1a29]" style={{ background: x.tint }}>{x.name}</Link>)}</div>
       </div>
     </main>
   );

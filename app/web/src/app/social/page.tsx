@@ -112,7 +112,7 @@ export default function Social() {
           <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
             {CRAFTS.map((c, i) => (
               <Link key={c.id} href={`/discover/${c.id}`} className="press rise group w-[168px] shrink-0 snap-start" style={{ animationDelay: `${i * 50}ms` }}>
-                <div className="aspect-[4/3] overflow-hidden rounded-[22px] bg-[var(--img-bg)] p-2 transition-transform duration-500 group-hover:scale-[1.02]"><CraftArt id={c.id} /></div>
+                <div className="aspect-[4/3] overflow-hidden rounded-[22px] p-2 transition-transform duration-500 group-hover:scale-[1.02]" style={{ background: c.tint }}><CraftArt id={c.id} /></div>
                 <div className="mt-2.5 px-1 text-[14.5px] font-medium tracking-[-0.01em]">{c.name}</div>
                 <div className="px-1 text-[12px] leading-snug text-muted">{c.blurb}</div>
               </Link>

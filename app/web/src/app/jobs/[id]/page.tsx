@@ -6,6 +6,7 @@ import { StateTag } from "@/components/JobState";
 import { PaidStamp } from "@/components/fun/PaidStamp";
 import { PaidCelebration } from "@/components/fun/PaidCelebration";
 import { Roll } from "@/components/fun/Roll";
+import { JobChat } from "@/components/JobChat";
 import { Check, Plus } from "@/components/icons";
 import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 import type { JobState } from "@/lib/demo";
@@ -160,6 +161,8 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
             </li>
           ))}
         </ol>
+
+        {j.chainJobId != null && <JobChat jobId={j.id} otherName={first(isClient ? j.artisan : j.client)} />}
 
         <h2 className="mt-8 text-[15px] font-medium">Rules you both agreed</h2>
         <div className="mt-3 flex flex-col gap-2 text-[13px] leading-relaxed text-muted">

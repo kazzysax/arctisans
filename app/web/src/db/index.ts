@@ -63,6 +63,8 @@ CREATE INDEX IF NOT EXISTS spend_key ON agent_spend(key_id, created_at);
 CREATE TABLE IF NOT EXISTS idempotency (key_id TEXT NOT NULL, idem TEXT NOT NULL, response TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(key_id, idem));
 CREATE TABLE IF NOT EXISTS used_nonces (key_id TEXT NOT NULL, nonce TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(key_id, nonce));
 CREATE TABLE IF NOT EXISTS chain_state (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS job_messages (id TEXT PRIMARY KEY, job_id TEXT NOT NULL, sender TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS job_msgs ON job_messages(job_id, created_at);
 CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, n INTEGER NOT NULL, reset_at INTEGER NOT NULL);
 `;
 

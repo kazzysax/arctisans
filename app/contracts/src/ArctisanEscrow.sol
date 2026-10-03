@@ -255,7 +255,6 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
             if (block.timestamp <= j.clockStart + SILENCE && !_hardExpired(j)) revert NotExpired();
             j.status = Status.Abandoned;
             records[j.artisan].abandoned++; // permanently loses upfront privilege
-            if (records[j.artisan].verified) { records[j.artisan].verified = false; emit ArtisanVerified(j.artisan, false); } // Verified means trusted: abandoning a job removes it
             uint96 refund = j.total - j.released;
             totalLocked -= refund;
             _pay(j.client, refund);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { verifyChecks, meetsRules, stillVerified, type VerifyInput } from "@/lib/verification";
+import { verifyChecks, meetsRules, type VerifyInput } from "@/lib/verification";
 
 const good = (): VerifyInput => ({ paidJobs: 3, clients: 3, abandoned: 0, deadlocked: 0, ratingAvg: 4.8, reviewers: 3, accountDays: 40, hasProofLink: true });
 
@@ -14,5 +14,4 @@ describe("verification rules", () => {
   it("one abandoned job disqualifies", () => expect(meetsRules({ ...good(), abandoned: 1 })).toBe(false));
   it("account must be 30 days old", () => expect(meetsRules({ ...good(), accountDays: 29 })).toBe(false));
   it("needs a public X or GitHub link", () => expect(meetsRules({ ...good(), hasProofLink: false })).toBe(false));
-  it("a team-granted badge is lost on abandon, kept while clean", () => { expect(stillVerified(true, 1)).toBe(false); expect(stillVerified(true, 0)).toBe(true); });
 });

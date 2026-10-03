@@ -1,5 +1,5 @@
 /**
- * Verified = honour and trust. Earned by record, never bought, and lost if you abandon a job.
+ * Verified = honour and trust. Earned by record, never bought. The team grants and can remove it by hand.
  * The team can also grant it by hand (see /api/admin/verify). Founding is a separate, clearly different mark.
  */
 export const VERIFY_RULES = { paidJobs: 3, clients: 3, reviewers: 3, minRating: 4.5, minPaidUsd: 5, accountDays: 30 } as const;
@@ -29,5 +29,3 @@ export function verifyChecks(i: VerifyInput): VerifyCheck[] {
   ];
 }
 export const meetsRules = (i: VerifyInput) => verifyChecks(i).every((c) => c.ok);
-/** A granted badge stays only while the record stays clean: abandoning a job removes it, whoever granted it. */
-export const stillVerified = (granted: boolean, abandoned: number) => granted && abandoned === 0;

@@ -35,7 +35,7 @@ export default function Verify() {
             </span>
             <div className="mt-4 font-serif text-[22px] uppercase tracking-[0.18em] text-black">{s?.verified ? "Verified" : "Verification"}</div>
             <p className="mt-2 max-w-[290px] text-[13px] leading-relaxed text-black/75">
-              {s?.verified ? "You are trusted on Arctisans. Keep your record clean: abandoning a job removes the seal." : "Verified is honour and trust. It is earned by your record, never bought, and it is lost if you abandon a job."}
+              {s?.verified ? "You are trusted on Arctisans. Keep earning that trust." : "Verified is honour and trust. It is earned by your record and never bought."}
             </p>
           </div>
         </div>

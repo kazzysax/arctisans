@@ -24,7 +24,7 @@ export const TermsSchema = z
   .superRefine((t, ctx) => {
     if (t.client === t.artisan) ctx.addIssue({ code: "custom", message: "client and artisan must differ" });
     const total = t.upfront + t.milestones.reduce((a, b) => a + b, 0);
-    if (total < MIN_JOB) ctx.addIssue({ code: "custom", message: "minimum job is $1" });
+    if (total < MIN_JOB) ctx.addIssue({ code: "custom", message: "minimum job is $0.10" });
     if (total > MAX_JOB) ctx.addIssue({ code: "custom", message: "maximum job is $100" });
   });
 export type Terms = z.infer<typeof TermsSchema>;

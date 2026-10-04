@@ -44,7 +44,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   const level = p?.level ?? { name: "New", upfrontPct: 0 };
   const canUpfront = level.upfrontPct > 0;
   const t = Number(total) || 0;
-  const over = t > 100, under = t < 1;
+  const over = t > 100, under = t < 0.1;
   const msSum = ms.reduce((a, b) => a + (Number(b) || 0), 0);
   const msOk = plan !== "milestones" || Math.abs(msSum - t) < 0.001;
   const deadline = new Date(now + days * 864e5).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -114,7 +114,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
               <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[22px] text-faint">$</span>
                 <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value.replace(/[^\d.]/g, ""))} className="field num h-[64px] pl-9 text-[26px] font-medium" />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-faint">USDC</span></div>
-              <span className={`text-[12px] ${over || under ? "text-fg" : "text-faint"}`}>{over ? "The limit is $100 per job for now." : under ? "Minimum is $1." : "No platform fee. Gas is sponsored, so it's free to send."}</span>
+              <span className={`text-[12px] ${over || under ? "text-fg" : "text-faint"}`}>{over ? "The limit is $100 per job for now." : under ? "Minimum is $0.10." : "No platform fee. Gas is sponsored, so it's free to send."}</span>
             </div>
 
             <div className="flex flex-col gap-2"><span className="label">How money is released</span>

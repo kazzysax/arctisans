@@ -1,6 +1,6 @@
 export const MICRO = 1_000_000;
 export const MAX_JOB = 100 * MICRO;
-export const MIN_JOB = 1 * MICRO;
+export const MIN_JOB = MICRO / 10; // $0.10, matches the escrow contract
 export const MIN_TIP = 500_000;
 export const TIP_PRESETS = [1 * MICRO, 2 * MICRO, 5 * MICRO] as const;
 

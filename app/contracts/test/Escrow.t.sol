@@ -19,7 +19,7 @@ contract Handler is Test {
     uint256[] public ids;
     constructor(ArctisanEscrow _e, MockUSDC _u) { e = _e; u = _u; }
     function create(uint96 amt, uint96 up) public {
-        amt = uint96(bound(amt, 1e6, 100e6)); up = uint96(bound(up, 0, amt / 2)); // pro artisan: <= 50% upfront
+        amt = uint96(bound(amt, 1e5, 100e6)); up = uint96(bound(up, 0, amt / 2)); // pro artisan: <= 50% upfront
         uint96[] memory m = new uint96[](1); m[0] = amt - up;
         vm.prank(c); uint256 id = e.propose(c, a, bytes32("t"), up, m, uint64(block.timestamp + 7 days), 1, ArctisanEscrow.DeadlockRule.Split5050);
         vm.prank(a); e.agree(id, bytes32("t"));
@@ -171,10 +171,20 @@ contract EscrowTest is Test {
         assertEq(u.balanceOf(a), 30e6); assertEq(uint8(e.statusOf(id)), uint8(ArctisanEscrow.Status.Completed));
     }
     function test_minJobAndPastDeadline() public {
-        uint96[] memory m = new uint96[](1); m[0] = 999_999;
+        uint96[] memory m = new uint96[](1); m[0] = 99_999; // just under $0.10
         vm.prank(c); vm.expectRevert(); e.propose(c, a, "t", 0, m, uint64(block.timestamp + 1 days), 0, ArctisanEscrow.DeadlockRule.Split5050);
         m[0] = 5e6;
         vm.prank(c); vm.expectRevert(); e.propose(c, a, "t", 0, m, uint64(block.timestamp), 0, ArctisanEscrow.DeadlockRule.Split5050);
+    }
+    function test_tenCentJobWorksEndToEnd() public {
+        address art = address(0xB0B); // fresh, unverified: no upfront
+        uint96[] memory m = new uint96[](1); m[0] = 1e5; // $0.10
+        vm.prank(c); uint256 id = e.propose(c, art, "t", 0, m, uint64(block.timestamp + 1 days), 0, ArctisanEscrow.DeadlockRule.Split5050);
+        vm.prank(art); e.agree(id, "t");
+        u.mint(c, 1e5); vm.startPrank(c); u.approve(address(e), 1e5); e.fund(id, "t"); vm.stopPrank();
+        vm.prank(art); e.start(id); vm.prank(art); e.deliver(id, "d"); vm.prank(c); e.approveDelivery(id);
+        assertEq(u.balanceOf(art), 1e5);
+        (uint32 completed,,,) = e.records(art); assertEq(completed, 0); // under $5: paid, but does not build the record
     }
     function test_wrongTermsCannotFund() public {
         uint96[] memory m = new uint96[](1); m[0] = 5e6;

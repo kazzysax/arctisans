@@ -51,7 +51,7 @@ contract ArctisanEscrow is ReentrancyGuardTransient, Ownable2Step, Pausable {
     uint256 public constant DEADLOCK_WINDOW = 48 hours;
     uint16 public constant MAX_FEE_BPS = 0;   // feeless, enforced: setParams can never add a fee
     uint8 public constant MAX_MILESTONES = 10;
-    uint96 public constant MIN_JOB = 1e6; // $1 minimum
+    uint96 public constant MIN_JOB = 1e5; // $0.10 minimum (small agent jobs); records still only count jobs >= $5
     // Upfront levels. Only Completed jobs of at least $5 count, so a record can't be padded with $1 jobs.
     uint96 public constant MIN_COUNTED_JOB = 5e6;
     uint16 public constant L2_UPFRONT_BPS = 3000; // Trusted: up to 30% on start

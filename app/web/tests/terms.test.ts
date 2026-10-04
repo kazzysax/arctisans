@@ -14,8 +14,9 @@ describe("terms", () => {
   it("any change changes the hash", () => {
     expect(hashTerms(TermsSchema.parse(base))).not.toBe(hashTerms(TermsSchema.parse({ ...base, revisions: 3 })));
   });
-  it("enforces $1 min, $100 max, distinct parties", () => {
-    expect(() => TermsSchema.parse({ ...base, upfront: 0, milestones: [999_999] })).toThrow();
+  it("enforces $0.10 min, $100 max, distinct parties", () => {
+    expect(() => TermsSchema.parse({ ...base, upfront: 0, milestones: [99_999] })).toThrow();
+    expect(TermsSchema.parse({ ...base, upfront: 0, milestones: [100_000] })).toBeTruthy(); // $0.10 is allowed
     expect(() => TermsSchema.parse({ ...base, upfront: 0, milestones: [100_000_001] })).toThrow();
     expect(() => TermsSchema.parse({ ...base, artisan: C })).toThrow();
     expect(TermsSchema.parse({ ...base, upfront: 0, milestones: [100_000_000] })).toBeTruthy();

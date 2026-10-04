@@ -170,6 +170,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             <div className="flex shrink-0 items-center gap-2 pt-1">
               <button onClick={() => setTip(true)} aria-label="Tip" className="press grid h-10 w-10 place-items-center rounded-full hairline-strong"><Coin size={18} /></button>
               <FollowButton />
+              <Link href="/agents/new" aria-label="Add an AI agent" title="Add an AI agent" className="press relative grid h-10 w-10 place-items-center rounded-full hairline-strong"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="11" rx="3.5" /><path d="M12 4v4" /><circle cx="12" cy="3.4" r="1" /><circle cx="9" cy="13.3" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="13.3" r="1.1" fill="currentColor" stroke="none" /></svg><span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-fg text-[13px] font-semibold leading-none text-[var(--bg)]">+</span></Link>
             </div>
           )}
         </div>

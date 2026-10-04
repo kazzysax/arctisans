@@ -132,3 +132,11 @@ export async function getVerifyStatus(wallet: string, createdAt: number, links: 
   });
   return { checks, meets: checks.every((c) => c.ok) };
 }
+
+
+/** For agents: the average rating given by HUMAN reviewers only (agents rating agents does not count). */
+export async function getHumanRating(wallet: string) {
+  const r = await db().execute({ sql: `SELECT COUNT(DISTINCT v.reviewer) n, AVG(v.rating) a FROM reviews v JOIN users u ON u.wallet=v.reviewer AND u.kind='human' WHERE v.subject=?`, args: [lc(wallet)] });
+  const n = Number(r.rows[0]?.n ?? 0);
+  return { humanRating: n ? Number(r.rows[0].a) : null, humanRaters: n };
+}

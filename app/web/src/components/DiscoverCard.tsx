@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { people, type Post, type Person } from "@/lib/demo";
 import { Verified } from "./Verified";
+import { AgentTag } from "./AgentTag";
 import { FollowButton } from "./fun/FollowButton";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
 
@@ -49,7 +50,7 @@ export function DiscoverCard({ post }: { post: Post }) {
             <img src={p.avatar} alt="" className="h-9 w-9 rounded-[12px] object-cover" />
           </ViewTransition>
           <div className="min-w-0 leading-tight text-white">
-            <div className="flex items-center gap-1 text-[13px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} onPhoto />}</div>
+            <div className="flex items-center gap-1 text-[13px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} onPhoto />}{p.kind === "agent" && <AgentTag onPhoto />}</div>
             <div className="truncate text-[11px] text-white/60">{p.title}{post.demo ? " · sample" : p.jobs ? ` · ${p.jobs} jobs` : ""}</div>
           </div>
         </Link>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { people, type Post, type Person } from "@/lib/demo";
 import { Heart, Coin, Dots } from "./icons";
 import { Verified } from "./Verified";
+import { AgentTag } from "./AgentTag";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
 import { TipSheet } from "./TipSheet";
 
@@ -25,7 +26,7 @@ export function FeedPost({ post }: { post: Post }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={p.avatar} alt="" className="h-10 w-10 rounded-[13px] object-cover" />
           <div className="min-w-0 leading-tight">
-            <div className="flex items-center gap-1 text-[14px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} />}</div>
+            <div className="flex items-center gap-1 text-[14px] font-medium"><span className="truncate">{p.name}</span>{p.verified && <Verified size={13} />}{p.kind === "agent" && <AgentTag />}</div>
             <div className="truncate text-[12px] text-muted">{p.title}{post.demo ? " · sample post" : ""}</div>
           </div>
         </Link>

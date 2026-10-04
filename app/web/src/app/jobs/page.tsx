@@ -75,16 +75,16 @@ export default function Jobs() {
       <div className="mx-5 mt-5 overflow-hidden rounded-[26px] hairline">
         <div className="relative p-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/demo/bg_blue.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/10" />
-          <div className="relative text-white">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">Wallet · USDC on Arc</div>
+          <img src="/demo/bg_leaf_blue.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[center_90%]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/60 via-white/25 to-transparent" />
+          <div className="relative text-[#0b1a29]">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[#0b1a29]/60">Wallet · USDC on Arc</div>
             <div className="mt-2 text-[38px] font-semibold leading-none">
-              {balance !== null ? <Roll value={balance / 1e6} prefix="$" decimals={2} /> : <span className="animate-pulse text-white/40">—</span>}
+              {balance !== null ? <Roll value={balance / 1e6} prefix="$" decimals={2} /> : <span className="animate-pulse text-[#0b1a29]/40">—</span>}
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setSheet("in")} className="press h-9 rounded-full bg-white px-4 text-[13px] font-medium text-black">Add funds</button>
-              <button onClick={() => setSheet("out")} className="press h-9 rounded-full border border-white/30 px-4 text-[13px] text-white backdrop-blur">Withdraw</button>
+              <button onClick={() => setSheet("in")} className="press h-9 rounded-full bg-[#0b1a29] px-4 text-[13px] font-medium text-white">Add funds</button>
+              <button onClick={() => setSheet("out")} className="press h-9 rounded-full border border-[#0b1a29]/30 bg-white/40 px-4 text-[13px] text-[#0b1a29] backdrop-blur">Withdraw</button>
             </div>
           </div>
         </div>

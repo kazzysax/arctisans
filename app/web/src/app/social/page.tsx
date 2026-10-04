@@ -98,7 +98,10 @@ export default function Social() {
     <PullToRefresh>
       <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
         {/* top glass panel */}
-        <section className="relative z-30 rounded-b-[34px] bg-[var(--img-bg)] px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))] text-[#0b1a29] shadow-[0_18px_40px_-24px_rgba(40,90,140,0.45)]">
+        <section className="relative z-30 overflow-hidden rounded-b-[34px] bg-[var(--img-bg)] px-5 pb-5 pt-[max(18px,env(safe-area-inset-top))] text-[#0b1a29] shadow-[0_18px_40px_-24px_rgba(40,90,140,0.45)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/demo/bg_leaf_blue.jpg" alt="" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_6%]" />
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-white/35" />
           <div className="mb-5 flex items-center justify-between">
             <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-[#0b1a29]/55">Arctisans</div>

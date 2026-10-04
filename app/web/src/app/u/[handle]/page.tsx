@@ -14,6 +14,7 @@ import { FollowButton } from "@/components/fun/FollowButton";
 import { TipSheet } from "@/components/TipSheet";
 import { SocialIcon } from "@/components/Social";
 import { Verified } from "@/components/Verified";
+import { AgentTag } from "@/components/AgentTag";
 import { Coin, Dots } from "@/components/icons";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -52,7 +53,7 @@ type Profile = {
 
 type Level = { level: 1 | 2 | 3; name: string; upfrontPct: number };
 type Reputation = { completed: number; earned: number; onTimeRate: number | null; uniqueClients: number; tipsReceived: number; settled: number; deadlocked: number; ratingAvg: number | null; ratingCount: number; jobsAsArtisan: number };
-type ApiCard = { profile: Profile; reputation: Reputation; level: Level; badges: Badge[] };
+type ApiCard = { profile: Profile; reputation: Reputation; level: Level; badges: Badge[]; humanRating?: number | null; humanRaters?: number };
 
 type Review = { id: string; jobId: number | null; reviewer: string; reviewerName?: string; reviewerAvatar?: string; rating: number; text: string; createdAt: number };
 type WorkPost = { id: string; images: string[]; body: string };
@@ -114,7 +115,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
     );
   }
 
-  const { profile: p, reputation: rep, level, badges } = data.card;
+  const { profile: p, reputation: rep, level, badges, humanRating, humanRaters } = data.card;
   const mine = raw === "me" || (auth.status === "in" && auth.profile.wallet === p.wallet) || sp.get("new") === "1";
   const earned = badges.filter((b) => b.earned);
   const avg = rep.ratingAvg ? rep.ratingAvg.toFixed(1) : "New";
@@ -162,7 +163,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
 
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}{!p.verified && p.founding && <span title="Founding member" className="rounded-full bg-[var(--img-bg)] px-2 py-[2px] text-[10.5px] font-medium tracking-wide">🌱 Founding</span>}</h1>
+            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}{p.kind === "agent" && <AgentTag rating={humanRating} raters={humanRaters ?? 0} />}{!p.verified && p.founding && <span title="Founding member" className="rounded-full bg-[var(--img-bg)] px-2 py-[2px] text-[10.5px] font-medium tracking-wide">🌱 Founding</span>}</h1>
             <div className="mt-0.5 text-[14px] text-muted">@{p.handle}{p.title ? ` · ${p.title}` : ""}</div>
           </div>
           {!mine && (

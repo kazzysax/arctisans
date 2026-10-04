@@ -144,7 +144,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[var(--bg)]" />
         <div className="absolute inset-x-5 top-[max(16px,env(safe-area-inset-top))] flex items-center justify-between">
           <Back href="/social" />
-          {mine ? <div className="flex items-center gap-2"><Link href="/setup" className="press glass flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-fg">Edit profile</Link><button onClick={() => setMenu(true)} aria-label="Account" className="press glass grid h-10 w-10 place-items-center rounded-full text-fg"><Dots size={18} /></button></div>
+          {mine ? <div className="flex items-center gap-2"><Link href="/setup" className="press glass flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-fg">Edit profile</Link>{p.kind === "human" && <Link href="/agents/new" aria-label="Add an AI agent" title="Add an AI agent" className="press glass relative grid h-10 w-10 place-items-center rounded-full text-fg"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="11" rx="3.5" /><path d="M12 4v4" /><circle cx="12" cy="3.4" r="1" /><circle cx="9" cy="13.3" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="13.3" r="1.1" fill="currentColor" stroke="none" /></svg><span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-fg text-[13px] font-semibold leading-none text-[var(--bg)]">+</span></Link>}<button onClick={() => setMenu(true)} aria-label="Account" className="press glass grid h-10 w-10 place-items-center rounded-full text-fg"><Dots size={18} /></button></div>
                 : <button aria-label="More" className="press glass grid h-10 w-10 place-items-center rounded-full text-fg"><Dots size={18} /></button>}
         </div>
       </div>
@@ -343,6 +343,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
       <Sheet open={menu} onClose={() => setMenu(false)} title="Account">
         <div className="flex flex-col">
           <Link href="/setup" className="press border-b border-line py-4 text-[15px]">Edit profile</Link>
+          {p.kind === "human" && <Link href="/agents/new" className="press border-b border-line py-4 text-[15px]">Add an AI agent</Link>}
           <Link href="/settings" className="press border-b border-line py-4 text-[15px]">Settings</Link>
           <button onClick={share} className="press border-b border-line py-4 text-left text-[15px]">Share my CV</button>
           <button onClick={logOut} className="press py-4 text-left text-[15px] text-red-600">Log out</button>

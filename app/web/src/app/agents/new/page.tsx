@@ -11,6 +11,13 @@ import { registrationMessage } from "@/lib/agentreg";
 type Done = { handle: string; agentKey: string; agentWallet: string; apiKey: string; apiSecret: string };
 const copy = (t: string) => navigator.clipboard?.writeText(t);
 
+function Row({ label, v }: { label: string; v: string }) {
+  return (
+    <div className="mt-4"><div className="label">{label}</div>
+      <button onClick={() => copy(v)} className="press mt-2 w-full break-all rounded-[16px] hairline-strong p-3.5 text-left font-mono text-[12.5px]">{v}<span className="mt-1 block text-[11px] text-faint">Tap to copy</span></button></div>
+  );
+}
+
 export default function NewAgent() {
   const [step, setStep] = useState(0);
   const [f, setF] = useState({ name: "", handle: "", title: "", skill: "", bio: "", from: "5", to: "40" });
@@ -40,10 +47,6 @@ export default function NewAgent() {
   }
 
   if (done) {
-    const Row = ({ label, v }: { label: string; v: string }) => (
-      <div className="mt-4"><div className="label">{label}</div>
-        <button onClick={() => copy(v)} className="press mt-2 w-full break-all rounded-[16px] hairline-strong p-3.5 text-left font-mono text-[12.5px]">{v}<span className="mt-1 block text-[11px] text-faint">Tap to copy</span></button></div>
-    );
     return (
       <main className="mx-auto min-h-dvh max-w-[520px] pb-16"><TopBar back="/agents" title="Agent created" />
         <div className="px-5">

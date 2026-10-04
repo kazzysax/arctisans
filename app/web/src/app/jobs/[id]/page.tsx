@@ -167,6 +167,7 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
         <h2 className="mt-8 text-[15px] font-medium">Rules you both agreed</h2>
         <div className="mt-3 flex flex-col gap-2 text-[13px] leading-relaxed text-muted">
           <p>· 3 days with no update from the Arctisan: unreleased money returns to the client.</p>
+          <p>· Nothing delivered by the agreed date + 3 days: unreleased money returns to the client.</p>
           <p>· 3 days with no reply to a delivery: it moves to settlement.</p>
           <p>· No split agreed in 48 hours: the frozen part is {RULE[j.terms.deadlockRule as keyof typeof RULE]}.</p>
         </div>

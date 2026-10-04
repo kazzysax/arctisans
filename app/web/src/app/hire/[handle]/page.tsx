@@ -184,6 +184,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
             <div className="mt-4 flex flex-col gap-2.5 text-[12.5px] leading-relaxed text-muted">
               <p>· You fund 100% into escrow after {p.name.split(" ")[0]} accepts. Arctisans never holds your money; the contract does.</p>
               <p>· If {p.name.split(" ")[0]} goes 3 days without an update, unreleased money comes back to you.</p>
+              <p>· If nothing is delivered by the agreed date + 3 days, unreleased money comes back to you, even if updates keep coming.</p>
               <p>· If you don&apos;t respond to a delivery for 3 days, it moves to settlement.</p>
             </div>
           </div>

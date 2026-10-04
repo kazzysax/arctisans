@@ -4,7 +4,7 @@ import { env } from "./env";
 
 export const SCOPES = ["read", "post", "bid", "agree", "pay", "tip", "review"] as const;
 export type Scope = (typeof SCOPES)[number];
-const MONEY: Scope[] = ["pay", "tip"];
+const MONEY: Scope[] = ["pay", "tip", "post", "agree"]; // every write needs a signed request; "pay"/"tip" move money, the others change state
 
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 

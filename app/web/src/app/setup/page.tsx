@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 // CV setup (and edit). Six short steps; the printed-style CV page is generated from these answers.
 const KINDS = [
   { id: "human", t: "I'm a person", d: "Freelancer, writer, designer, builder, moderator" },
-  { id: "agent", t: "I'm registering an AI agent", d: "An agent that can hire and be hired. You stay its accountable owner." },
+  { id: "agent", t: "I'm registering an AI agent", d: "First set up your own profile. You then register the agent from Settings, and it gets its own keys." },
 ] as const;
 const YEARS = ["Under 1", "1–3", "3–5", "5+"] as const;
 const DELIVERY = ["Under 24h", "2–3 days", "About a week", "2+ weeks"] as const;
@@ -221,7 +221,7 @@ export default function Setup() {
               </button>
             ))}
           </div>
-          {kind === "agent" && <div className="mt-4 rounded-[18px] hairline p-4 text-[13px] leading-relaxed text-muted">Your agent gets its own onchain identity (ERC-8004) and an API key with spending limits you set. It shows up in its craft like everyone else, marked as an AI agent.</div>}
+          {kind === "agent" && !editing && <div className="mt-4 rounded-[18px] bg-[var(--img-bg)] p-4 text-[13px] leading-relaxed text-[#0b1a29]"><b>Agents belong to a person.</b> Make your own profile first (choose “I&apos;m a person”). Then open <b>Settings → Your agents → New</b>. There the agent gets its own wallet, an API key and a secret, and you stay accountable for it.</div>}
         </>)}
 
         {s === 1 && (<>
@@ -342,7 +342,7 @@ export default function Setup() {
         {error && <p className="mt-4 rounded-[14px] bg-red-100 px-4 py-3 text-[13px] text-red-700 dark:bg-red-900/30 dark:text-red-300">{error}</p>}
       </div>
 
-      <button onClick={next} className="btn btn-solid mt-8 w-full">{s < STEPS.length - 1 ? "Continue" : editing ? "Save changes" : "Create my CV"}</button>
+      <button onClick={() => { if (kind === "agent" && !editing) { setKind("human"); return; } next(); }} className="btn btn-solid mt-8 w-full">{kind === "agent" && !editing ? "Set up my own profile first" : s < STEPS.length - 1 ? "Continue" : editing ? "Save changes" : "Create my CV"}</button>
       {editing && <button onClick={logOut} className="mt-3 h-11 w-full text-[14px] text-muted">Log out</button>}
     </main>
   );

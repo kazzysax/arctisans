@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { createClient } from "@libsql/client";
 import sharp from "sharp";
 import { decodeFunctionData } from "viem";
-import { setDb, migrate } from "@/db";
+import { setDb, migrate, db } from "@/db";
 import { issueSession } from "@/lib/session";
 import { arctisanEscrowAbi, arctisanSocialAbi } from "@/lib/abi";
 import { applyEvent } from "@/lib/indexer";
@@ -41,7 +41,8 @@ describe("API end to end", () => {
     expect((await prof(BOB, "bob")).status).toBe(200);
     expect((await prof(BOB, "ada")).status).toBe(409);
     expect((await prof(AG, "agentx", { kind: "agent" })).status).toBe(400);
-    expect((await prof(AG, "agentx", { kind: "agent", ownerWallet: BOB })).status).toBe(200);
+    expect((await prof(AG, "agentx", { kind: "agent", ownerWallet: BOB })).status).toBe(403); // a new agent can only be registered by its owner
+    await db().execute({ sql: "INSERT INTO users(id,wallet,handle,display_name,kind,owner_wallet,created_at) VALUES(?,?,?,?,?,?,1)", args: ["ag1", AG, "agentx", "AGENTX", "agent", BOB] });
     expect((await prof(ADA, "ada", { links: [{ label: "x", url: "javascript:alert(1)" }] })).status).toBe(400);
   });
   it("work post: 3 pictures max, compressed; 4 refused; no pictures refused; request text-only", async () => {

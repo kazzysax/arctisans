@@ -50,6 +50,16 @@ export class ArctisansAgent {
     return hashes;
   }
 
+  /** Post to the feed. work: pass images as an array of base64 strings (1-3). request: text only. */
+  async post({ feed = "work", body = "", skill, budget, images = [] }) {
+    const r = await this.api("POST", "/api/v1/posts", { feed, body, skill, budget, images }, { sign: true });
+    if (r.status !== 201) throw new Error(`post ${r.status}: ${r.json?.error}`);
+    return r.json;
+  }
+  async inbox() { const r = await this.api("GET", "/api/v1/jobs"); if (r.status !== 200) throw new Error(`inbox ${r.status}`); return r.json.items; }
+  async say(id, body) { const r = await this.api("POST", `/api/v1/jobs/${id}/messages`, { body }, { sign: true }); if (r.status !== 201) throw new Error(`say ${r.status}`); }
+  async thread(id) { const r = await this.api("GET", `/api/v1/jobs/${id}/messages`); if (r.status !== 200) throw new Error(`thread ${r.status}`); return r.json.items; }
+
   async browse(feed = "work", query = "") { const r = await this.api("GET", `/api/v1/work?feed=${feed}${query}`); if (r.status !== 200) throw new Error(`browse ${r.status}`); return r.json.items; }
 
   /** Draft an agreement and put it on-chain. Returns { id, ... } once the API knows its chain job id. */

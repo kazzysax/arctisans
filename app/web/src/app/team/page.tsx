@@ -23,7 +23,7 @@ export default function Team() {
   }, []);
   useEffect(() => { void load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
-  async function act(handle: string, action: "verify" | "unverify" | "founding" | "unfounding" | "decline") {
+  async function act(handle: string, action: "verify" | "unverify" | "founding" | "unfounding" | "decline" | "remove") {
     setNote(null);
     const r = await fetch("/api/admin/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ handle, action }) });
     const j = await r.json();
@@ -74,6 +74,7 @@ export default function Team() {
             <div className="mt-2 flex flex-wrap gap-2">
               {f.verified ? <Btn onClick={() => act(f.handle, "unverify")}>Remove Verified</Btn> : <Btn solid onClick={() => act(f.handle, "verify")}>Verify</Btn>}
               {f.founding ? <Btn onClick={() => act(f.handle, "unfounding")}>Remove Founding</Btn> : <Btn onClick={() => act(f.handle, "founding")}>Give Founding 🌱</Btn>}
+              <Btn onClick={() => { if (confirm(`Remove @${f.handle}? Only works if it has no jobs, posts or keys.`)) void act(f.handle, "remove"); }}>Remove profile</Btn>
             </div>
           </div>
         ))}

@@ -29,7 +29,18 @@ export const GET = route("admin-verify-list", 30, async (req) => {
 export const POST = route("admin-verify", 30, async (req) => {
   const { wallet } = requireSession(req);
   if (!isAdmin(wallet)) return fail(403, "Not allowed");
-  const b = z.object({ handle: z.string().min(3).max(20), action: z.enum(["verify", "unverify", "founding", "unfounding", "decline"]) }).parse(await req.json());
+  const b = z.object({ handle: z.string().min(3).max(20), action: z.enum(["verify", "unverify", "founding", "unfounding", "decline", "remove"]) }).parse(await req.json());
+  if (b.action === "remove") {
+    const u = await db().execute({ sql: "SELECT wallet FROM users WHERE lower(handle)=?", args: [b.handle.toLowerCase()] });
+    const w = u.rows[0] ? String(u.rows[0].wallet) : null;
+    if (!w) return fail(404, "No such user");
+    // Only an unused profile can be removed: no jobs, posts or keys. Nothing on-chain is touched.
+    const used = await db().execute({ sql: "SELECT (SELECT COUNT(*) FROM jobs WHERE client=? OR artisan=?) j, (SELECT COUNT(*) FROM posts WHERE author_wallet=?) p, (SELECT COUNT(*) FROM api_keys WHERE agent_wallet=?) k", args: [w, w, w, w] });
+    const x = used.rows[0];
+    if (Number(x.j) || Number(x.p) || Number(x.k)) return fail(409, "This profile has jobs, posts or keys, so it cannot be removed");
+    await db().execute({ sql: "DELETE FROM users WHERE wallet=?", args: [w] });
+    return ok({ handle: b.handle, removed: true });
+  }
   if (b.action === "decline") {
     const d = await db().execute({ sql: "UPDATE users SET verify_requested=0 WHERE lower(handle)=?", args: [b.handle.toLowerCase()] });
     return d.rowsAffected ? ok({ handle: b.handle, declined: true }) : fail(404, "No such user");

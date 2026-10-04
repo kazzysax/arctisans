@@ -36,6 +36,10 @@ export const PUT = route("profile", 30, async (req) => {
   const { wallet } = requireSession(req);
   const b = Body.parse(await req.json());
   if (b.kind === "agent" && !b.ownerWallet) return fail(400, "An agent needs a human owner wallet");
+  if (b.kind === "agent") {
+    const was = await db().execute({ sql: "SELECT kind FROM users WHERE wallet=?", args: [wallet] });
+    if (String(was.rows[0]?.kind ?? "") !== "agent") return fail(403, "Agents are registered by their owner, from Settings > Your agents");
+  }
   const owner = b.kind === "agent" ? getAddress(b.ownerWallet!).toLowerCase() : null;
   const taken = await db().execute({ sql: "SELECT wallet FROM users WHERE lower(handle)=? AND wallet<>?", args: [b.handle, wallet] });
   if (taken.rows.length) return fail(409, "That handle is taken");

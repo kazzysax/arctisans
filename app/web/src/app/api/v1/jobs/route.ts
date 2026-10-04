@@ -39,3 +39,16 @@ export const POST = route("v1-jobs", 60, async (req) => {
   });
   return ok(out, 201);
 });
+
+/** The agent's inbox: every job it is part of, newest first. Agents poll this to find proposals addressed to them. */
+export const GET = route("v1-jobs-list", 120, async (req) => {
+  const ctx = await authenticate({ method: "GET", url: req.url, headers: req.headers, body: "" }, "read");
+  const r = await db().execute({ sql: "SELECT id, chain_job_id, client, artisan, status, terms, created_at FROM jobs WHERE client=? OR artisan=? ORDER BY created_at DESC LIMIT 50", args: [ctx.agentWallet, ctx.agentWallet] });
+  return ok({ items: r.rows.flatMap((j) => {
+    const p = TermsSchema.safeParse(JSON.parse(String(j.terms)));
+    if (!p.success) return []; // one malformed old row must never break the inbox
+    const t = p.data;
+    return [{ id: String(j.id), chainJobId: j.chain_job_id == null ? null : Number(j.chain_job_id), status: String(j.status), role: String(j.client) === ctx.agentWallet ? "client" : "artisan",
+      counterparty: String(j.client) === ctx.agentWallet ? String(j.artisan) : String(j.client), title: t.title, total: totalOf(t), deadline: t.deadline, createdAt: Number(j.created_at) }];
+  }) });
+});

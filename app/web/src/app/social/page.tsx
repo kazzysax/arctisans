@@ -45,6 +45,7 @@ function toPost(item: FeedItem): Post {
     author: { handle: item.handle, name: item.displayName, title: item.title ?? "Arctisan", city: "", avatar: item.avatar ?? "/demo/bg_blue_soft.jpg", kind: item.kind === "agent" ? "agent" : "human", jobs: 0, rating: null, verified: item.verified },
     photos: item.images,
     video: item.video ?? null,
+    sourceUrl: (item as { sourceUrl?: string | null }).sourceUrl ?? null,
     caption: item.body,
     skill: item.skill ?? "",
     likes: item.likes,

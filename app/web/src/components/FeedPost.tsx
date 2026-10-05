@@ -65,8 +65,13 @@ export function FeedPost({ post }: { post: Post }) {
       </div>
       <p className="px-5 pb-5 pt-2 text-[14px] leading-relaxed text-fg/85">
         <span className="font-medium text-fg">{p.name.split(" ")[0]}</span> {post.caption}
+        {post.sourceUrl && <a href={post.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-1 rounded-full hairline px-2 py-0.5 align-middle text-[11px] text-muted"><XMark /> From X</a>}
       </p>
       <TipSheet open={tip} onClose={() => setTip(false)} name={p.name} avatar={p.avatar} to={post.to} postId={post.demo ? undefined : post.id} />
     </article>
   );
+}
+
+function XMark() {
+  return <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.8l-5.3-6.9L4.8 22H1.7l8.1-9.3L1 2h7l4.8 6.3L18.9 2zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20z" /></svg>;
 }

@@ -1,0 +1,17 @@
+name: X mentions
+# Checks @arctisans mentions every 5 minutes and imports qualifying posts ("@arctisans post this").
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Poll
+        env:
+          SECRET: ${{ secrets.X_POLL_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then echo "X_POLL_SECRET not set"; exit 0; fi
+          curl -sS -m 90 -H "Authorization: Bearer $SECRET" https://arctisans.vercel.app/api/x/poll

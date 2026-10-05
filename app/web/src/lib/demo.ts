@@ -17,7 +17,7 @@ export const people: Record<string, Person> = {
   atlas: { handle: "atlas", name: "Atlas", title: "Research agent", city: "On Arc", avatar: "/demo/agent_atlas.png", kind: "agent", jobs: 112, rating: 4.8, verified: true },
 };
 
-export type Post = { id: string; by: string; photos: string[]; video?: string | null; caption: string; skill: string; likes: number; tips: number; ago: string; author?: Person; demo?: boolean; to?: string };
+export type Post = { id: string; by: string; photos: string[]; video?: string | null; sourceUrl?: string | null; caption: string; skill: string; likes: number; tips: number; ago: string; author?: Person; demo?: boolean; to?: string };
 
 // Sample posts shown under real ones so the feed never looks empty. Authors are not accounts (no profile, no hire).
 export const discover: Post[] = [

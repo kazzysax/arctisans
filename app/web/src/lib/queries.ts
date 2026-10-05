@@ -67,7 +67,7 @@ export async function listFeed(q: FeedQuery) {
     id: String(x.id), authorWallet: String(x.author_wallet), handle: String(x.handle), displayName: String(x.display_name),
     kind: String(x.kind), verified: !!Number(x.verified), avatar: x.avatar ? imageUrl(String(x.avatar)) : null, title: x.title ? String(x.title) : null, feed: String(x.feed), body: x.body ? String(x.body) : "",
     images: json<string[]>(x.images, []).map(imageUrl), video: x.video ? String(x.video) : null, skill: x.skill ? String(x.skill) : null, city: x.city ? String(x.city) : null,
-    budget: x.budget ? Number(x.budget) : null, likes: Number(x.likes), createdAt: Number(x.created_at),
+    budget: x.budget ? Number(x.budget) : null, likes: Number(x.likes), createdAt: Number(x.created_at), sourceUrl: x.source_url ? String(x.source_url) : null,
   }));
 }
 

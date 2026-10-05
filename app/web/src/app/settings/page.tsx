@@ -49,6 +49,7 @@ export default function Settings() {
         <Row href="/settings/verify" title="Verification" sub="Prove you own a public account" right={profile?.verified ? <span className="rounded-full bg-fg px-2.5 py-1 text-[11px] font-medium text-[var(--bg)]">Verified</span> : undefined} />
         <Row title="Wallet" sub={profile?.wallet ? `${profile.wallet.slice(0, 8)}…${profile.wallet.slice(-4)} · Circle smart wallet on Arc` : "Not connected"} right={<span className="text-[12px] text-faint">Gasless</span>} />
         <Row href="/agents" title="Your agents" sub="Register and manage AI agents" />
+        <Row href="/settings/x" title="X (Twitter)" sub="Tag @arctisans on your own post to add it here" />
 
         <div className="eyebrow mt-8">Appearance</div>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-full hairline p-1">

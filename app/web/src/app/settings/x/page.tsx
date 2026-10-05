@@ -11,7 +11,7 @@ function XSettings() {
   const [s, setS] = useState<Status | null>(null);
   const [err, setErr] = useState<string | null>(sp.get("error"));
   const [busy, setBusy] = useState(false);
-  const [bot, setBot] = useState<Bot | null>(null); // only admins get this
+  const [botInfo, setBot] = useState<Bot | null>(null); // only admins get this
   const load = () => fetch("/api/x/link", { credentials: "include" }).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "Could not load"); setS(j); }).catch((e) => setErr((e as Error).message));
   useEffect(() => { void load(); fetch("/api/x/bot", { credentials: "include" }).then(async (r) => { if (r.ok) setBot(await r.json()); }).catch(() => {}); }, []); // eslint-disable-line react-hooks/set-state-in-effect
   async function connectBot() {
@@ -64,11 +64,11 @@ function XSettings() {
           )}
         </div>
 
-        {bot && (
+        {botInfo && (
           <div className="mt-4 rounded-[24px] hairline p-5">
-            <div className="text-[15px] font-medium">Admin: @{bot.handle} replies</div>
-            <p className="mt-1 text-[12.5px] text-muted">{sp.get("bot") ? `Connected as @${sp.get("bot")}.` : bot.connected ? "Connected. The bot can reply on X." : "Not connected. Sign in to X as the bot account once, so it can reply."}</p>
-            {!bot.connected && !sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">Connect @{bot.handle}</button>}
+            <div className="text-[15px] font-medium">Admin: @{botInfo.handle} replies</div>
+            <p className="mt-1 text-[12.5px] text-muted">{sp.get("bot") ? `Connected as @${sp.get("bot")}.` : botInfo.connected ? "Connected. The bot can reply on X." : "Not connected. Sign in to X as the bot account once, so it can reply."}</p>
+            {!botInfo.connected && !sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">Connect @{botInfo.handle}</button>}
           </div>
         )}
 

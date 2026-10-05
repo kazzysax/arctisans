@@ -47,3 +47,6 @@ tsconfig.tsbuildinfo
 
 .vercel
 .env*
+
+# local-only test scripts
+scripts/*.local.ts

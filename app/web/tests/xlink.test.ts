@@ -24,7 +24,8 @@ describe("X import: only your own original post", () => {
     expect(pickImport(t({ referenced_tweets: [{ type: "quoted", id: "9" }] }), null, opts)).toMatchObject({ ok: false, reason: expect.stringContaining("quote") });
   });
   it("refuses a post without uploaded media", () => {
-    expect(pickImport(t({ attachments: undefined }), null, opts)).toMatchObject({ ok: false, reason: expect.stringContaining("pictures or a video") });
+    expect(pickImport(t({ attachments: undefined }), null, opts)).toMatchObject({ ok: true });
+    expect(pickImport(t({ attachments: undefined, text: "@arctisans post this" }), null, opts)).toMatchObject({ ok: false, reason: expect.stringContaining("no text") });
   });
   it("a reply to YOUR OWN post imports the parent", () => {
     const parent = t({ id: "50", text: "finished this poster", referenced_tweets: undefined });

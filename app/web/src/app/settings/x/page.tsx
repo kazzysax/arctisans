@@ -74,7 +74,7 @@ function XSettings() {
 
         <div className="eyebrow mt-8">How it works</div>
         <ol className="mt-3 space-y-3 text-[14px] leading-relaxed">
-          <li><b>1.</b> Post your work on X with pictures or a video.</li>
+          <li><b>1.</b> Post your work on X, with pictures or a video if you have them.</li>
           <li><b>2.</b> In the post, or in a reply to your own post, write <b>@{bot} post this</b>.</li>
           <li><b>3.</b> Within about a minute it shows on your profile, linked back to X.</li>
         </ol>
@@ -82,7 +82,7 @@ function XSettings() {
         <ul className="mt-3 space-y-2 text-[13.5px] leading-relaxed text-muted">
           <li>· It must be posted by the X account you linked. Tagging us on someone else&apos;s post does nothing.</li>
           <li>· No retweets, no quotes, no replies to other people&apos;s posts.</li>
-          <li>· It needs pictures or a video you uploaded, not just a link.</li>
+          <li>· Pictures or a video you uploaded are shown. A text-only post is fine too.</li>
           <li>· Each post is added once. Copied work can be reported and hidden.</li>
         </ul>
       </div>

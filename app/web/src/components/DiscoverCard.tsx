@@ -23,6 +23,8 @@ export function DiscoverCard({ post }: { post: Post }) {
       {post.video ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+        ) : post.photos.length === 0 ? (
+          <div className="absolute inset-0 bg-[var(--img-bg)]" />
         ) : (
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}

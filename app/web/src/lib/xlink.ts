@@ -117,7 +117,7 @@ export function pickImport(m: XTweet, parent: XTweet | null, opts: { linkedXId: 
   const srcRefs = source.referenced_tweets ?? [];
   if (srcRefs.some((r) => r.type === "retweeted" || r.type === "quoted")) return { ok: false, reason: "that post is a retweet or quote" };
   if (source !== m && source.in_reply_to_user_id && source.in_reply_to_user_id !== source.author_id) return { ok: false, reason: "that post is a reply to someone else" };
-  if (!source.attachments?.media_keys?.length) return { ok: false, reason: "the post needs uploaded pictures or a video" };
+  if (!source.attachments?.media_keys?.length && !cleanCaption(source.text, opts.handle)) return { ok: false, reason: "the post has no text, pictures or video" };
   return { ok: true, source };
 }
 /** Caption = the post text without the command, links and mentions of us. */
@@ -192,7 +192,7 @@ export async function pollMentions() {
     try {
       const pool = src === m ? media : new Map(parentMedia.map((x) => [x.media_key, x]));
       const items = (src.attachments?.media_keys ?? []).map((k) => pool.get(k)).filter((x): x is XMedia => !!x);
-      const { images, video } = await importMedia(items);
+      const { images, video } = items.length ? await importMedia(items) : { images: [] as string[], video: null };
       const wallet = String(link!.wallet), id = crypto.randomUUID();
       const body = cleanCaption(src.text, handle);
       const hash = keccak256(toBytes(JSON.stringify({ id, wallet, body, x: src.id })));

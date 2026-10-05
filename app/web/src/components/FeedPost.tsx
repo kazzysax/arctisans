@@ -38,6 +38,8 @@ export function FeedPost({ post }: { post: Post }) {
 {post.video ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+        ) : post.photos.length === 0 ? (
+          <div className="absolute inset-0 grid place-items-center bg-[var(--img-bg)] p-7 text-center text-[#0b1a29]"><p className="line-clamp-[12] whitespace-pre-line text-[19px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p></div>
         ) : (
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -44,6 +44,21 @@ async function ensureProfiles(agents: Agent[]) {
     });
     say(`created profile @${a.handle}`);
   }
+  await ensureShowcase(agents);
+}
+
+/** One showcase post per agent (picture ships with the app). Idempotent: keyed by the picture path in the post hash. */
+async function ensureShowcase(agents: Agent[]) {
+  const base = Date.now() - agents.length * 1000;
+  let i = 0;
+  for (const a of agents) {
+    const ref = `/agents/showcase/${a.handle}.webp`, hash = keccak256(toBytes(`showcase:${a.handle}`));
+    const has = await db().execute({ sql: "SELECT 1 FROM posts WHERE hash=?", args: [hash] });
+    if (has.rows.length) continue;
+    await db().execute({ sql: "INSERT INTO posts(id,author_wallet,feed,body,images,video,skill,city,hash,budget,created_at) VALUES(?,?,'work',?,?,NULL,?,NULL,?,NULL,?)",
+      args: [crypto.randomUUID(), a.wallet, a.showcase, JSON.stringify([ref]), a.skills[0], hash, base + 1000 * i++] });
+    say(`posted showcase for @${a.handle}`);
+  }
 }
 
 async function send(a: Agent, calls: Call[]) {

@@ -183,11 +183,20 @@ async function retryReplies() {
 async function importMedia(media: XMedia[]): Promise<{ images: string[]; video: string | null }> {
   const vid = media.find((x) => x.type === "video" || x.type === "animated_gif");
   if (vid) {
-    const best = (vid.variants ?? []).filter((v) => v.content_type === "video/mp4").sort((a, b) => (b.bit_rate ?? 0) - (a.bit_rate ?? 0))[0];
-    if (!best) throw new Error("video has no mp4");
+    // Best quality that fits our 20 MB limit: X offers several sizes of the same video (size known from the HEAD request).
+    const LIMIT = 20 * 1024 * 1024;
+    const options = (vid.variants ?? []).filter((v) => v.content_type === "video/mp4").sort((a, b) => (b.bit_rate ?? 0) - (a.bit_rate ?? 0));
+    if (!options.length) throw new Error("video has no mp4");
+    let best: (typeof options)[number] | null = null;
+    for (const o of options) {
+      const h = await fetch(o.url, { method: "HEAD" }).catch(() => null);
+      const size = Number(h?.headers.get("content-length") ?? 0);
+      if (size > 0 && size <= LIMIT) { best = o; break; }
+    }
+    if (!best) throw new Error("video is too long (over 20 MB even in the smallest size)");
     const r = await fetch(best.url); if (!r.ok) throw new Error(`video ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.length > 20 * 1024 * 1024) throw new Error("video over 20 MB");
+    if (buf.length > LIMIT) throw new Error("video over 20 MB");
     const { url } = await put(`videos/x-${crypto.randomUUID()}.mp4`, buf, { access: "public", contentType: "video/mp4" });
     return { images: [], video: url };
   }
@@ -215,7 +224,7 @@ export async function pollMentions() {
     // Posts refused under an older rule are retried once: only imported/failed ones are final.
     const seen = await db().execute({ sql: "SELECT 1 FROM x_imports WHERE tweet_id=? AND status='imported'", args: [m.id] });
     if (seen.rows.length) continue;
-    await db().execute({ sql: "DELETE FROM x_imports WHERE tweet_id=? AND status='refused'", args: [m.id] });
+    await db().execute({ sql: "DELETE FROM x_imports WHERE tweet_id=? AND status IN ('refused','failed')", args: [m.id] });
     const link = (await db().execute({ sql: "SELECT wallet, x_id FROM x_links WHERE x_id=?", args: [m.author_id] })).rows[0];
     let parent: XTweet | null = null, parentMedia: XMedia[] = [];
     const rt = m.referenced_tweets?.find((r) => r.type === "replied_to");
@@ -250,6 +259,7 @@ export async function pollMentions() {
       out.push({ tweet: m.id, result: `imported as ${id}` });
     } catch (e) {
       await db().execute({ sql: "INSERT INTO x_imports(tweet_id,wallet,status,reason,created_at) VALUES(?,?,'failed',?,?)", args: [m.id, String(link!.wallet), String((e as Error).message).slice(0, 200), Date.now()] });
+      await reply(m.id, `Couldn't add this to Arctisans: ${String((e as Error).message).slice(0, 120)}.`).catch(() => false);
       out.push({ tweet: m.id, result: `failed: ${(e as Error).message}` });
     }
   }

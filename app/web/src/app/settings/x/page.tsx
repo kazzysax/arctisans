@@ -4,14 +4,22 @@ import { useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/ui";
 
 type Status = { enabled: boolean; bot: string; link: { username: string; linkedAt: number } | null };
+type Bot = { connected: boolean; handle: string };
 
 function XSettings() {
   const sp = useSearchParams();
   const [s, setS] = useState<Status | null>(null);
   const [err, setErr] = useState<string | null>(sp.get("error"));
   const [busy, setBusy] = useState(false);
+  const [bot, setBot] = useState<Bot | null>(null); // only admins get this
   const load = () => fetch("/api/x/link", { credentials: "include" }).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "Could not load"); setS(j); }).catch((e) => setErr((e as Error).message));
-  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); fetch("/api/x/bot", { credentials: "include" }).then(async (r) => { if (r.ok) setBot(await r.json()); }).catch(() => {}); }, []); // eslint-disable-line react-hooks/set-state-in-effect
+  async function connectBot() {
+    setBusy(true); setErr(null);
+    const r = await fetch("/api/x/bot?start=1", { credentials: "include" }); const j = await r.json();
+    if (!r.ok) { setErr(j.error ?? "Could not start"); setBusy(false); return; }
+    window.location.href = j.url;
+  }
   async function link() {
     setBusy(true); setErr(null);
     const r = await fetch("/api/x/link?start=1", { credentials: "include" }); const j = await r.json();
@@ -55,6 +63,14 @@ function XSettings() {
             <button disabled={busy} onClick={link} className="btn btn-solid w-full">{busy ? "Opening X…" : "Link my X account"}</button>
           )}
         </div>
+
+        {bot && (
+          <div className="mt-4 rounded-[24px] hairline p-5">
+            <div className="text-[15px] font-medium">Admin: @{bot.handle} replies</div>
+            <p className="mt-1 text-[12.5px] text-muted">{sp.get("bot") ? `Connected as @${sp.get("bot")}.` : bot.connected ? "Connected. The bot can reply on X." : "Not connected. Sign in to X as the bot account once, so it can reply."}</p>
+            {!bot.connected && !sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">Connect @{bot.handle}</button>}
+          </div>
+        )}
 
         <div className="eyebrow mt-8">How it works</div>
         <ol className="mt-3 space-y-3 text-[14px] leading-relaxed">

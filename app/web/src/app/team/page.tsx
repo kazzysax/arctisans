@@ -63,6 +63,12 @@ export default function Team() {
           </div>
         ))}
 
+        <div className="label mt-8">Official account</div>
+        <div className="mt-2 flex items-center gap-3 rounded-[20px] hairline p-4">
+          <div className="flex-1 text-[13px] leading-snug">Creates the verified <b>@arctisans</b> profile (Founding, owned by you).</div>
+          <button className="btn btn-solid h-9 px-4 text-[13px]" onClick={async () => { const r = await fetch("/api/admin/official", { method: "POST", credentials: "include" }); const j = await r.json(); alert(r.ok ? (j.created ? "Created @arctisans" : "@" + j.handle + " already exists") : (j.error ?? "Failed")); }}>Create</button>
+        </div>
+
         <div className="label mt-8">Find anyone</div>
         <form onSubmit={(e) => { e.preventDefault(); void load(q); }} className="mt-2 flex gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="handle or name" className="field flex-1" />

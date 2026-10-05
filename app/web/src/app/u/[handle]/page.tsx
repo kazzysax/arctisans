@@ -56,7 +56,7 @@ type Reputation = { completed: number; earned: number; onTimeRate: number | null
 type ApiCard = { profile: Profile; reputation: Reputation; level: Level; badges: Badge[]; humanRating?: number | null; humanRaters?: number };
 
 type Review = { id: string; jobId: number | null; reviewer: string; reviewerName?: string; reviewerAvatar?: string; rating: number; text: string; createdAt: number };
-type WorkPost = { id: string; images: string[]; body: string };
+type WorkPost = { id: string; images: string[]; video?: string | null; body: string };
 
 function ago(ts: number): string {
   const diff = Math.floor((Date.now() - ts) / 1000);
@@ -222,10 +222,26 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
           {tab === "Art" && (
             <div className="grid grid-cols-3 gap-1.5">
               {posts.length === 0 && <p className="col-span-3 py-8 text-center text-[14px] text-muted">No art posted yet.</p>}
-              {posts.flatMap((p) => p.images).slice(0, 9).map((src, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={src} alt="" className={`w-full rounded-[14px] object-cover ${i === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square"}`} />
-              ))}
+              {posts.slice(0, 12).map((w, i) => {
+                const big = i === 0 ? "col-span-2 row-span-2" : "";
+                const tile = `relative block aspect-square w-full overflow-hidden rounded-[14px] ${big}`;
+                return (
+                  <Link key={w.id} href={`/p/${w.id}`} className={tile}>
+                    {w.images[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={w.images[0]} alt="" className="h-full w-full object-cover" />
+                    ) : w.video ? (
+                      <>
+                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                        <video src={`${w.video}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full bg-black object-cover" />
+                        <span className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 4.5v15l13-7.5z" /></svg></span>
+                      </>
+                    ) : (
+                      <div className="grid h-full w-full place-items-center bg-[var(--img-bg)] p-3 text-center text-[#0b1a29]"><p className={`line-clamp-6 font-medium leading-snug ${i === 0 ? "text-[15px]" : "text-[11px]"}`}>{w.body}</p></div>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
 

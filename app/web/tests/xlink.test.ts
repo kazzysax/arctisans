@@ -19,9 +19,9 @@ describe("X import: only your own original post", () => {
   it("refuses someone else tagging us (author must be the linked account)", () => {
     expect(pickImport(t({ author_id: OTHER }), null, opts)).toMatchObject({ ok: false });
   });
-  it("refuses retweets and quotes", () => {
+  it("refuses retweets, allows your own quote posts", () => {
     expect(pickImport(t({ referenced_tweets: [{ type: "retweeted", id: "9" }] }), null, opts)).toMatchObject({ ok: false, reason: expect.stringContaining("retweet") });
-    expect(pickImport(t({ referenced_tweets: [{ type: "quoted", id: "9" }] }), null, opts)).toMatchObject({ ok: false, reason: expect.stringContaining("quote") });
+    expect(pickImport(t({ referenced_tweets: [{ type: "quoted", id: "9" }] }), null, opts)).toMatchObject({ ok: true });
   });
   it("refuses a post without uploaded media", () => {
     expect(pickImport(t({ attachments: undefined }), null, opts)).toMatchObject({ ok: true });
@@ -44,5 +44,13 @@ describe("X import: only your own original post", () => {
   });
   it("cleans the caption", () => {
     expect(cleanCaption("New poster for Ade's shop @arctisans post this https://t.co/abc", H)).toBe("New poster for Ade's shop");
+  });
+});
+
+describe("quote post of your own, imported via a reply", () => {
+  it("imports the quote post you replied to", () => {
+    const parent = t({ id: "5", text: "my take on this", referenced_tweets: [{ type: "quoted", id: "9" }], attachments: { media_keys: ["k"] } });
+    const reply = t({ id: "6", text: "@arctisans post this", attachments: undefined, referenced_tweets: [{ type: "replied_to", id: "5" }], in_reply_to_user_id: ME });
+    expect(pickImport(reply, parent, opts)).toMatchObject({ ok: true });
   });
 });

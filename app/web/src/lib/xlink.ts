@@ -104,7 +104,6 @@ export function pickImport(m: XTweet, parent: XTweet | null, opts: { linkedXId: 
   if (m.author_id !== opts.linkedXId) return { ok: false, reason: "only the linked account can import" };
   const refs = m.referenced_tweets ?? [];
   if (refs.some((r) => r.type === "retweeted")) return { ok: false, reason: "retweets are not original posts" };
-  if (refs.some((r) => r.type === "quoted")) return { ok: false, reason: "quotes are not original posts" };
   const replyTo = refs.find((r) => r.type === "replied_to");
   let source = m;
   if (!m.attachments?.media_keys?.length && replyTo) {
@@ -115,7 +114,7 @@ export function pickImport(m: XTweet, parent: XTweet | null, opts: { linkedXId: 
     return { ok: false, reason: "replies to someone else are not original posts" };
   }
   const srcRefs = source.referenced_tweets ?? [];
-  if (srcRefs.some((r) => r.type === "retweeted" || r.type === "quoted")) return { ok: false, reason: "that post is a retweet or quote" };
+  if (srcRefs.some((r) => r.type === "retweeted")) return { ok: false, reason: "that post is a retweet" };
   if (source !== m && source.in_reply_to_user_id && source.in_reply_to_user_id !== source.author_id) return { ok: false, reason: "that post is a reply to someone else" };
   if (!source.attachments?.media_keys?.length && !cleanCaption(source.text, opts.handle)) return { ok: false, reason: "the post has no text, pictures or video" };
   return { ok: true, source };
@@ -166,13 +165,15 @@ export async function pollMentions() {
   const handle = botHandle();
   let botId = await getState("x_bot_id");
   if (!botId) { botId = ((await bearer(`/users/by/username/${handle}`)) as { data: { id: string } }).data.id; await setState("x_bot_id", botId); }
-  const since = await getState("x_since");
+  const since = await getState("x_since_v2");
   const res = (await bearer(`/users/${botId}/mentions?max_results=20&${FIELDS}${since ? `&since_id=${since}` : ""}`)) as { data?: XTweet[]; includes?: { media?: XMedia[] }; meta?: { newest_id?: string } };
   const out: { tweet: string; result: string }[] = [];
   const media = new Map((res.includes?.media ?? []).map((x) => [x.media_key, x]));
   for (const m of (res.data ?? []).reverse()) {
-    const seen = await db().execute({ sql: "SELECT 1 FROM x_imports WHERE tweet_id=?", args: [m.id] });
+    // Posts refused under an older rule are retried once: only imported/failed ones are final.
+    const seen = await db().execute({ sql: "SELECT 1 FROM x_imports WHERE tweet_id=? AND status='imported'", args: [m.id] });
     if (seen.rows.length) continue;
+    await db().execute({ sql: "DELETE FROM x_imports WHERE tweet_id=? AND status='refused'", args: [m.id] });
     const link = (await db().execute({ sql: "SELECT wallet, x_id FROM x_links WHERE x_id=?", args: [m.author_id] })).rows[0];
     let parent: XTweet | null = null, parentMedia: XMedia[] = [];
     const rt = m.referenced_tweets?.find((r) => r.type === "replied_to");
@@ -209,7 +210,7 @@ export async function pollMentions() {
       out.push({ tweet: m.id, result: `failed: ${(e as Error).message}` });
     }
   }
-  if (res.meta?.newest_id) await setState("x_since", res.meta.newest_id);
+  if (res.meta?.newest_id) await setState("x_since_v2", res.meta.newest_id);
   return { checked: res.data?.length ?? 0, out };
 }
 

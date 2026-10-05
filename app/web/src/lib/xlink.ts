@@ -216,7 +216,8 @@ export async function pollMentions() {
   const handle = botHandle();
   let botId = await getState("x_bot_id");
   if (!botId) { botId = ((await bearer(`/users/by/username/${handle}`)) as { data: { id: string } }).data.id; await setState("x_bot_id", botId); }
-  const since = await getState("x_since_v2");
+  // one-time: step back to just before the mention that failed on a large video, so it is retried (x_since_v3)
+  const since = (await getState("x_since_v3")) ?? "2107235813272551874";
   const res = (await bearer(`/users/${botId}/mentions?max_results=20&${FIELDS}${since ? `&since_id=${since}` : ""}`)) as { data?: XTweet[]; includes?: { media?: XMedia[] }; meta?: { newest_id?: string } };
   const out: { tweet: string; result: string }[] = [];
   const media = new Map((res.includes?.media ?? []).map((x) => [x.media_key, x]));
@@ -263,7 +264,7 @@ export async function pollMentions() {
       out.push({ tweet: m.id, result: `failed: ${(e as Error).message}` });
     }
   }
-  if (res.meta?.newest_id) await setState("x_since_v2", res.meta.newest_id);
+  if (res.meta?.newest_id) await setState("x_since_v3", res.meta.newest_id);
   await retryReplies().catch(() => {});
   return { checked: res.data?.length ?? 0, out };
 }

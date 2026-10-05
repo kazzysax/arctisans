@@ -87,7 +87,22 @@ async function botToken(): Promise<{ id: string; access: string } | null> {
   const b = JSON.parse(dec(raw)) as { id: string; access: string; refresh?: string; exp: number };
   if (b.exp - Date.now() > 120_000) return b;
   if (!b.refresh) return null;
-  const t = await token({ grant_type: "refresh_token", refresh_token: b.refresh, client_id: process.env.X_CLIENT_ID! });
+  // X refresh keys work ONCE. Only one process may renew at a time: claim a short lock, and if someone else holds it, wait for their result.
+  await db().execute({ sql: "INSERT OR IGNORE INTO chain_state(k,v) VALUES('x_bot_lock','0')", args: [] });
+  const now = Date.now();
+  const got = await db().execute({ sql: "UPDATE chain_state SET v=? WHERE k='x_bot_lock' AND CAST(v AS INTEGER) < ?", args: [String(now), now - 30_000] });
+  if (got.rowsAffected === 0) {
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const again = await getState("x_bot");
+      if (again) { const a = JSON.parse(dec(again)) as { id: string; access: string; exp: number }; if (a.exp - Date.now() > 120_000) return a; }
+    }
+    return null;
+  }
+  // re-read inside the lock: another process may have just renewed
+  const cur = JSON.parse(dec((await getState("x_bot"))!)) as { id: string; access: string; refresh?: string; exp: number };
+  if (cur.exp - Date.now() > 120_000) return cur;
+  const t = await token({ grant_type: "refresh_token", refresh_token: cur.refresh ?? b.refresh, client_id: process.env.X_CLIENT_ID! });
   const nb = { id: b.id, access: t.access_token, refresh: t.refresh_token ?? b.refresh, exp: Date.now() + t.expires_in * 1000 };
   await setState("x_bot", enc(JSON.stringify(nb)));
   return nb;

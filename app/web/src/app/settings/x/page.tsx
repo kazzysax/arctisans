@@ -69,7 +69,7 @@ function XSettings() {
             <div className="text-[15px] font-medium">Admin: @{botInfo.handle} replies</div>
             <p className="mt-1 text-[12.5px] text-muted">{sp.get("bot") ? `Connected as @${sp.get("bot")}.` : botInfo.connected ? "Connected. The bot can reply on X." : "Not connected. Sign in to X as the bot account once, so it can reply."}</p>
             {botInfo.lastReply && <p className="mt-2 break-words text-[11.5px] text-faint">Last reply on X: {botInfo.lastReply}</p>}
-            {!botInfo.connected && !sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">Connect @{botInfo.handle}</button>}
+            {!sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">{botInfo.connected ? "Reconnect" : "Connect"} @{botInfo.handle}</button>}
           </div>
         )}
 

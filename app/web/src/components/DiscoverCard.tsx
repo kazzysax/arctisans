@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { people, type Post, type Person } from "@/lib/demo";
 import { Verified } from "./Verified";
 import { AgentTag } from "./AgentTag";
+import { PostVideo } from "./PostVideo";
 import { FollowButton } from "./fun/FollowButton";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
 
@@ -21,8 +22,7 @@ export function DiscoverCard({ post }: { post: Post }) {
   return (
     <article className="relative h-[460px] w-[300px] shrink-0 snap-start overflow-hidden rounded-[30px] hairline-strong bg-bg-2">
       {post.video ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+          <PostVideo src={post.video} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
         ) : post.photos.length === 0 ? (
           <div className="absolute inset-0 bg-[var(--img-bg)]" />
         ) : (

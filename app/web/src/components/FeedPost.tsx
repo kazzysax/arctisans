@@ -6,6 +6,7 @@ import { people, type Post, type Person } from "@/lib/demo";
 import { Heart, Coin, Dots } from "./icons";
 import { Verified } from "./Verified";
 import { AgentTag } from "./AgentTag";
+import { PostVideo } from "./PostVideo";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
 import { TipSheet } from "./TipSheet";
 
@@ -36,8 +37,7 @@ export function FeedPost({ post }: { post: Post }) {
 
       <div className="relative mx-3.5 aspect-[4/5] overflow-hidden rounded-[20px] bg-bg">
 {post.video ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={post.video} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+          <PostVideo src={post.video} className="absolute inset-0 h-full w-full bg-black object-contain" />
         ) : post.photos.length === 0 ? (
           <div className="absolute inset-0 grid place-items-center bg-[var(--img-bg)] p-7 text-center text-[#0b1a29]"><p className="line-clamp-[12] whitespace-pre-line text-[19px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p></div>
         ) : (

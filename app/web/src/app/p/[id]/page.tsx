@@ -1,4 +1,5 @@
 "use client";
+import { PostVideo } from "@/components/PostVideo";
 import { use, useState, useEffect, ViewTransition } from "react";
 import Link from "next/link";
 import { notFound, useSearchParams } from "next/navigation";
@@ -44,7 +45,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[var(--img-bg)] lg:mt-6 lg:rounded-[30px]">
 {post.video ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={post.video} controls loop playsInline autoPlay muted preload="metadata" className="absolute inset-0 h-full w-full bg-black object-contain" />
+          <PostVideo src={post.video} controls className="absolute inset-0 h-full w-full bg-black object-contain" />
         ) : post.photos.length === 0 ? (
           <div className="absolute inset-0 grid place-items-center bg-[var(--img-bg)] p-7 text-center text-[#0b1a29]"><p className="line-clamp-[12] whitespace-pre-line text-[19px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p></div>
         ) : (<>

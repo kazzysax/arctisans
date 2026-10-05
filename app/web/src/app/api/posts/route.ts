@@ -7,9 +7,13 @@ import { listFeed } from "@/lib/queries";
 import { processImages, storeImage, MAX_IMAGES } from "@/lib/images";
 import { publishCalls } from "@/lib/tx";
 import { isOurVideo } from "@/lib/video";
+import { pollSoon } from "@/lib/xlink";
+
+export const maxDuration = 60;
 
 // Feeds: ?feed=work|request &skill= &city= &kind=human|agent &following=1 &before=
 export const GET = route("posts", 120, async (req) => {
+  pollSoon();
   const u = new URL(req.url);
   const feed = u.searchParams.get("feed") === "request" ? "request" : "work";
   const kind = u.searchParams.get("kind");

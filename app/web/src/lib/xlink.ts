@@ -212,3 +212,23 @@ export async function pollMentions() {
   if (res.meta?.newest_id) await setState("x_since", res.meta.newest_id);
   return { checked: res.data?.length ?? 0, out };
 }
+
+/**
+ * Opportunistic poll: called (after the response is sent) whenever someone loads the feed or the X settings page.
+ * At most one check per 45 seconds across all servers, so imports land within ~a minute while the app is in use.
+ * Empty checks cost no X credits (reads are charged per post returned). The GitHub timer stays as the quiet-time backstop.
+ */
+export async function maybePoll(minGapMs = 45_000) {
+  if (!xConfigured() || !process.env.X_BEARER_TOKEN) return null;
+  await xMigrate();
+  const now = Date.now();
+  await db().execute({ sql: "INSERT OR IGNORE INTO chain_state(k,v) VALUES('x_last_poll','0')", args: [] });
+  const got = await db().execute({ sql: "UPDATE chain_state SET v=? WHERE k='x_last_poll' AND CAST(v AS INTEGER) < ?", args: [String(now), now - minGapMs] });
+  if (got.rowsAffected === 0) return null;
+  return pollMentions();
+}
+
+/** Run the opportunistic poll after the response. Never throws, and does nothing outside a web request (tests, scripts). */
+export function pollSoon(minGapMs = 45_000) {
+  try { void import("next/server").then(({ after }) => after(() => maybePoll(minGapMs).catch((e) => console.error("[x-poll]", e)))).catch(() => {}); } catch { /* not in a request */ }
+}

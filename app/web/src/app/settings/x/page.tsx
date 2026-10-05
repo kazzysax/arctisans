@@ -76,7 +76,7 @@ function XSettings() {
         <ol className="mt-3 space-y-3 text-[14px] leading-relaxed">
           <li><b>1.</b> Post your work on X with pictures or a video.</li>
           <li><b>2.</b> In the post, or in a reply to your own post, write <b>@{bot} post this</b>.</li>
-          <li><b>3.</b> Within a few minutes it shows on your profile, linked back to X.</li>
+          <li><b>3.</b> Within about a minute it shows on your profile, linked back to X.</li>
         </ol>
         <div className="eyebrow mt-8">Only your original posts</div>
         <ul className="mt-3 space-y-2 text-[13.5px] leading-relaxed text-muted">

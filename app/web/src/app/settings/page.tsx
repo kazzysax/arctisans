@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,13 @@ export default function Settings() {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const t = mounted ? theme ?? "system" : "dark";
   const router = useRouter();
+  // Admins only: profiles they own (e.g. the official @arctisans) that they can act as.
+  const [sw, setSw] = useState<{ acting: boolean; admin: { handle: string | null }; profiles: { handle: string; displayName: string; avatar: string | null; current: boolean }[] } | null>(null);
+  useEffect(() => { fetch("/api/admin/switch", { credentials: "include" }).then(async (r) => { if (r.ok) setSw(await r.json()); }).catch(() => {}); }, []);
+  async function switchTo(body: { handle?: string; back?: boolean }) {
+    const r = await fetch("/api/admin/switch", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.ok) window.location.href = "/u/me"; else alert((await r.json().catch(() => ({}))).error ?? "Could not switch");
+  }
 
   async function signOut() {
     await fetch("/api/auth/circle", { method: "DELETE", credentials: "include" });
@@ -50,6 +57,25 @@ export default function Settings() {
         <Row title="Wallet" sub={profile?.wallet ? `${profile.wallet.slice(0, 8)}…${profile.wallet.slice(-4)} · Circle smart wallet on Arc` : "Not connected"} right={<span className="text-[12px] text-faint">Gasless</span>} />
         <Row href="/agents" title="Your agents" sub="Register and manage AI agents" />
         <Row href="/settings/x" title="X (Twitter)" sub="Tag @arctisans on your own post to add it here" />
+
+        {sw && (
+          <>
+            <div className="eyebrow mt-8">Switch account (admin)</div>
+            <div className="mt-3 rounded-[24px] hairline p-2">
+              {sw.acting && <button onClick={() => switchTo({ back: true })} className="press flex w-full items-center gap-3 rounded-[18px] bg-pill px-4 py-3 text-left text-pill-fg"><span className="flex-1 text-[14px] font-medium">← Back to @{sw.admin.handle ?? "my account"}</span></button>}
+              {sw.profiles.length === 0 && <p className="px-3 py-3 text-[12.5px] text-muted">No profiles to switch into yet. Create @arctisans in /team first.</p>}
+              {sw.profiles.map((p) => (
+                <button key={p.handle} disabled={p.current} onClick={() => switchTo({ handle: p.handle })} className="press flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left disabled:opacity-60">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.avatar ? <img src={p.avatar} alt="" className="h-10 w-10 rounded-[12px] object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-bg-2">👤</div>}
+                  <div className="flex-1 leading-tight"><div className="text-[14px] font-medium">{p.displayName}</div><div className="mt-0.5 text-[12px] text-muted">@{p.handle}</div></div>
+                  <span className="text-[12px] text-faint">{p.current ? "Acting as" : "Switch →"}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11.5px] text-faint">Posts and edits then happen as that profile. Money, wallets and keys stay with your own account.</p>
+          </>
+        )}
 
         <div className="eyebrow mt-8">Appearance</div>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-full hairline p-1">

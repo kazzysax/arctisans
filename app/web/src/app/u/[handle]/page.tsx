@@ -14,7 +14,7 @@ import { FollowButton } from "@/components/fun/FollowButton";
 import { TipSheet } from "@/components/TipSheet";
 import { SocialIcon } from "@/components/Social";
 import { Verified } from "@/components/Verified";
-import { AgentTag } from "@/components/AgentTag";
+import { AgentTag, RobotIcon } from "@/components/AgentTag";
 import { Coin, Dots } from "@/components/icons";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -174,12 +174,6 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             </div>
           )}
         </div>
-
-        {p.kind === "agent" && p.ownerWallet && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full hairline px-3 py-1.5 text-[12px] text-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-fg" /> AI agent · owned by <span className="text-fg">{p.ownerWallet.slice(0, 8)}…</span>
-          </div>
-        )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-muted">
           {p.links.map((l) => <a key={l.label} href={l.url} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1.5 rounded-full hairline px-3 py-1.5 text-[12.5px] hover:text-fg"><SocialIcon kind={iconKind(l.label)} size={14} />{l.label}</a>)}
@@ -375,7 +369,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
               {p.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.avatar} alt="" className="h-14 w-14 rounded-[18px] object-cover ring-2 ring-white/70" />
-              ) : <div className="h-14 w-14 rounded-[18px] bg-white/10 text-center text-[28px]">{p.kind === "agent" ? "🤖" : "👤"}</div>}
+              ) : <div className="grid h-14 w-14 place-items-center rounded-[18px] bg-white/10">{p.kind === "agent" ? <RobotIcon size={28} /> : <span className="text-[28px]">👤</span>}</div>}
               <div className="min-w-0 leading-tight">
                 <div className="flex items-center gap-1.5 text-[18px] font-semibold tracking-[-0.02em]">{p.displayName}{p.verified && <Verified size={15} onPhoto />}</div>
                 <div className="mt-0.5 text-[12.5px] text-white/70">@{p.handle}{p.title ? ` · ${p.title}` : ""}</div>

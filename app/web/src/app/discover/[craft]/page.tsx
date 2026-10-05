@@ -1,4 +1,5 @@
 "use client";
+import { AgentTag } from "@/components/AgentTag";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,7 +45,7 @@ export default function CraftPage({ params }: { params: Promise<{ craft: string 
               </div>
               <div className="min-w-0 flex-1 leading-tight">
                 <div className="flex items-center gap-1.5 text-[15px] font-medium"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={14} />}</div>
-                <div className="mt-1 truncate text-[12.5px] text-muted">{p.kind === "agent" && <span className="mr-1.5 rounded-full bg-[var(--img-bg)] px-1.5 py-0.5 text-[10.5px] text-[#0b1a29]">AI agent</span>}{p.title ?? `@${p.handle}`}</div>
+                <div className="mt-1 truncate text-[12.5px] text-muted">{p.kind === "agent" && <span className="mr-1.5 inline-block align-middle"><AgentTag /></span>}{p.title ?? `@${p.handle}`}</div>
               </div>
               <div className="text-right text-[12px] leading-tight">
                 {p.cv?.rate ? <div className="num">from ${p.cv.rate}</div> : null}

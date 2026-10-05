@@ -48,7 +48,11 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         ) : (<>
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0">
+            {/* Whole picture, never cropped: fitted inside the frame over a soft blurred copy of itself */}
+            <img src={post.photos[i]} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+            <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-contain" />
+          </div>
         </ViewTransition>
         <button aria-label="Next picture, double tap to appreciate" onClick={tap} className="absolute inset-0" />
         </>)}

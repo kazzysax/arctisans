@@ -41,7 +41,10 @@ export function FeedPost({ post }: { post: Post }) {
         ) : (
         <ViewTransition name={`photo-${post.id}`} share="morph" default="none">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full bg-[var(--img-bg)] object-cover" />
+          <div className="absolute inset-0">
+            <img src={post.photos[i]} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+            <img src={post.photos[i]} alt={post.caption} className="absolute inset-0 h-full w-full object-contain" />
+          </div>
         </ViewTransition>
         )}
         <button aria-label="Open post" className="absolute inset-0" onClick={tap} />

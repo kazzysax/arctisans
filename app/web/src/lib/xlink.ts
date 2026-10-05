@@ -14,7 +14,15 @@ export const X_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS x_imports (tweet_id TEXT PRIMARY KEY, wallet TEXT, post_id TEXT, status TEXT NOT NULL, reason TEXT, created_at INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS x_oauth (state TEXT PRIMARY KEY, verifier TEXT NOT NULL, wallet TEXT NOT NULL, purpose TEXT NOT NULL, created_at INTEGER NOT NULL)",
 ];
-export async function xMigrate() { await migrate(); for (const s of X_SCHEMA) await db().execute(s); }
+export async function xMigrate() {
+  await migrate(); for (const s of X_SCHEMA) await db().execute(s);
+  // replied: 1 = nothing left to do (all old rows), 0 = import done but the confirmation reply on X has not gone out yet
+  try {
+    await db().execute("ALTER TABLE x_imports ADD COLUMN replied INTEGER NOT NULL DEFAULT 1");
+    // one-time: the two posts imported before replies were tracked never got their confirmation on X
+    await db().execute("UPDATE x_imports SET replied=0 WHERE tweet_id IN ('2107233803286544819','2107235813272551874') AND status='imported'");
+  } catch { /* column exists */ }
+}
 
 export const xConfigured = () => !!(process.env.X_CLIENT_ID && process.env.X_CLIENT_SECRET);
 export const botHandle = () => (process.env.X_BOT_HANDLE ?? "arctisans").replace(/^@/, "").toLowerCase();
@@ -131,11 +139,30 @@ async function bearer(path: string) {
   return r.json();
 }
 const FIELDS = "tweet.fields=author_id,conversation_id,in_reply_to_user_id,referenced_tweets,attachments&expansions=attachments.media_keys&media.fields=type,url,preview_image_url,variants";
+/** Reply as the bot. Always records what happened (x_reply_last) so a silent failure can be diagnosed from the team page. */
 async function reply(toId: string, text: string) {
-  const b = await botToken();
-  if (!b) return false;
-  const r = await fetch(`${API}/tweets`, { method: "POST", headers: { authorization: `Bearer ${b.access}`, "content-type": "application/json" }, body: JSON.stringify({ text, reply: { in_reply_to_tweet_id: toId } }) });
-  return r.ok;
+  let note = "";
+  try {
+    const b = await botToken();
+    if (!b) note = "bot not connected (or its login expired with no refresh token)";
+    else {
+      const r = await fetch(`${API}/tweets`, { method: "POST", headers: { authorization: `Bearer ${b.access}`, "content-type": "application/json" }, body: JSON.stringify({ text, reply: { in_reply_to_tweet_id: toId } }) });
+      note = r.ok ? "ok" : `X ${r.status}: ${(await r.text()).slice(0, 220)}`;
+      if (r.ok) { await setState("x_reply_last", `${new Date().toISOString()} ok`); return true; }
+    }
+  } catch (e) { note = `error: ${(e as Error).message}`; }
+  await setState("x_reply_last", `${new Date().toISOString()} ${note}`);
+  return false;
+}
+export async function lastReplyNote() { await xMigrate(); return (await getState("x_reply_last")) ?? "no reply attempted yet"; }
+
+/** Retry confirmation replies that failed (e.g. the bot was offline). Capped, newest first, last 2 days. */
+async function retryReplies() {
+  const rows = (await db().execute({ sql: "SELECT i.tweet_id, i.wallet FROM x_imports i WHERE i.status='imported' AND i.replied=0 AND i.created_at > ? ORDER BY i.created_at DESC LIMIT 5", args: [Date.now() - 2 * 86400_000] })).rows;
+  for (const r of rows) {
+    const h = (await db().execute({ sql: "SELECT handle FROM users WHERE wallet=?", args: [String(r.wallet)] })).rows[0];
+    if (await reply(String(r.tweet_id), `Added to your Arctisans profile: ${process.env.APP_URL ?? "https://arctisans.vercel.app"}/u/${h ? String(h.handle) : "me"}`)) await db().execute({ sql: "UPDATE x_imports SET replied=1 WHERE tweet_id=?", args: [String(r.tweet_id)] });
+  }
 }
 
 async function importMedia(media: XMedia[]): Promise<{ images: string[]; video: string | null }> {
@@ -203,7 +230,8 @@ export async function pollMentions() {
       if (src.id !== m.id) await db().execute({ sql: "INSERT OR IGNORE INTO x_imports(tweet_id,wallet,post_id,status,reason,created_at) VALUES(?,?,?,'imported','command reply',?)", args: [m.id, wallet, id, Date.now()] });
       await db().execute({ sql: "INSERT INTO notifications(id,wallet,kind,data,created_at) VALUES(?,?,?,?,?)", args: [crypto.randomUUID(), wallet, "x_import", JSON.stringify({ postId: id }), Date.now()] });
       const h = (await db().execute({ sql: "SELECT handle FROM users WHERE wallet=?", args: [wallet] })).rows[0];
-      await reply(m.id, `Added to your Arctisans profile: ${process.env.APP_URL ?? "https://arctisans.vercel.app"}/u/${h ? String(h.handle) : "me"}`).catch(() => false);
+      await db().execute({ sql: "UPDATE x_imports SET replied=0 WHERE tweet_id=?", args: [m.id] });
+      if (await reply(m.id, `Added to your Arctisans profile: ${process.env.APP_URL ?? "https://arctisans.vercel.app"}/u/${h ? String(h.handle) : "me"}`)) await db().execute({ sql: "UPDATE x_imports SET replied=1 WHERE tweet_id=?", args: [m.id] });
       out.push({ tweet: m.id, result: `imported as ${id}` });
     } catch (e) {
       await db().execute({ sql: "INSERT INTO x_imports(tweet_id,wallet,status,reason,created_at) VALUES(?,?,'failed',?,?)", args: [m.id, String(link!.wallet), String((e as Error).message).slice(0, 200), Date.now()] });
@@ -211,6 +239,7 @@ export async function pollMentions() {
     }
   }
   if (res.meta?.newest_id) await setState("x_since_v2", res.meta.newest_id);
+  await retryReplies().catch(() => {});
   return { checked: res.data?.length ?? 0, out };
 }
 

@@ -192,6 +192,15 @@ export async function runNative(maxRounds = 12) {
   return { agents: agents.length, log: [...log] };
 }
 
+/** Create/refresh the five profiles only (no money moves). Safe to call from a public route. */
+export async function ensureNative() {
+  const agents = nativeAgents();
+  if (!agents.length) return [];
+  await migrate();
+  await ensureProfiles(agents);
+  return agents.map((a) => ({ handle: a.handle, name: a.name, title: a.title, price: a.price, wallet: a.wallet, avatar: a.avatar }));
+}
+
 /** Cheap check so request handlers only wake the worker for jobs that involve a native agent. */
 export function touchesNative(wallets: string[]) {
   const mine = new Set(nativeAgents().map((a) => a.wallet));

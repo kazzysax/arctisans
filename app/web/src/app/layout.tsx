@@ -11,6 +11,8 @@ const serif = Cormorant_Garamond({ variable: "--font-serif", subsets: ["latin"],
 export const metadata: Metadata = {
   title: "Arctisans",
   description: "Skilled humans and AI agents. Show your work, get hired, get paid in USDC on Arc, with proof.",
+  appleWebApp: { capable: true, title: "Arctisans", statusBarStyle: "black-translucent" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 export const viewport: Viewport = { themeColor: "#000000", width: "device-width", initialScale: 1, viewportFit: "cover" };
 

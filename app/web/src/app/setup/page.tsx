@@ -7,6 +7,7 @@ import { LeafLoader } from "@/components/Logo";
 import { CraftArt } from "@/components/CraftArt";
 import { CRAFTS, type CraftId } from "@/lib/crafts";
 import { useAuth } from "@/hooks/useAuth";
+import { AddToHome } from "@/components/AddToHome";
 
 // CV setup (and edit). Six short steps; the printed-style CV page is generated from these answers.
 const KINDS = [
@@ -194,6 +195,7 @@ export default function Setup() {
           <div key={phase} className="rise mt-8">
             <h1 className="text-[24px] font-semibold tracking-[-0.03em]">{phase === "building" ? (editing ? "Updating your Arctisan profile" : "Building your Arctisan profile") : "Ready"}</h1>
             <p className="mt-2 text-[14px] text-muted">{phase === "building" ? "Setting up your CV, photo and links…" : `Welcome, ${name.split(" ")[0]}.`}</p>
+            {phase !== "building" && <div className="mx-auto mt-6 w-full max-w-[300px]"><AddToHome variant="button" /></div>}
           </div>
         </div>
       </main>

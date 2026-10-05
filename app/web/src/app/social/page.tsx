@@ -9,6 +9,7 @@ import { Bell } from "@/components/icons";
 import { PullToRefresh } from "@/components/fun/PullToRefresh";
 import { CraftArt } from "@/components/CraftArt";
 import { CRAFTS } from "@/lib/crafts";
+import { AddToHome } from "@/components/AddToHome";
 import { discover as sampleDiscover, following as sampleFollowing, type Post } from "@/lib/demo";
 
 
@@ -131,6 +132,8 @@ export default function Social() {
             ))}
           </HScroll>
         </div>
+
+        <AddToHome />
 
         <div className="pt-8">
           <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Art</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Latest art</SectionTitle>

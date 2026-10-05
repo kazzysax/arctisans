@@ -1,4 +1,5 @@
 "use client";
+import { AddToHome } from "@/components/AddToHome";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -76,6 +77,9 @@ export default function Settings() {
             <p className="mt-2 text-[11.5px] text-faint">Posts and edits then happen as that profile. Money, wallets and keys stay with your own account.</p>
           </>
         )}
+
+        <div className="eyebrow mt-8">App</div>
+        <div className="mt-3 rounded-[24px] hairline p-4"><div className="text-[14px] font-medium">Install Arctisans</div><p className="mt-1 text-[12.5px] text-muted">Put the app on your home screen. It opens full screen with its own icon.</p><AddToHome variant="button" /></div>
 
         <div className="eyebrow mt-8">Appearance</div>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-full hairline p-1">

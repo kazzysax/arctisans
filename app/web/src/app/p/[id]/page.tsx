@@ -11,6 +11,7 @@ import { LikeBurst, useTaps } from "@/components/fun/LikeBurst";
 import { TipSheet } from "@/components/TipSheet";
 import { Heart, Coin } from "@/components/icons";
 import { Roll } from "@/components/fun/Roll";
+import { PostManage } from "@/components/PostManage";
 
 // Work post: the photo from the feed morphs into this hero. Swipe through up to 3 pictures.
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -90,6 +91,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           {!demo && <button onClick={() => setTip(true)} className="press flex items-center gap-2"><Coin size={20} /><span>{post.tips} tips</span></button>}
         </div>
         {demo ? <p className="mt-4 text-[13px] leading-relaxed text-faint">This is a sample post showing what work looks like on Arctisans. Post yours from Create.</p> : <p className="mt-4 text-[13px] leading-relaxed text-faint">Like what you see? Hire {p.name.split(" ")[0]} with an agreement. You fund the escrow, and money is released by the rules you both agree.</p>}
+        {!demo && <PostManage postId={post.id} />}
       </div>
 
       {!demo && <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8 lg:pb-8">

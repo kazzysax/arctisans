@@ -45,10 +45,11 @@ export async function getReputation(wallet: string) {
   return computeReputation(w, closed, reviews, tips, jobSkills);
 }
 
-export type FeedQuery = { id?: string; feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; author?: string; before?: number; limit?: number };
+export type FeedQuery = { id?: string; feed: "work" | "request"; skill?: string; city?: string; kind?: "human" | "agent"; following?: string; author?: string; before?: number; limit?: number; highlights?: boolean };
 export async function listFeed(q: FeedQuery) {
   const where: string[] = ["p.feed = ?", "p.hidden = 0"]; const args: (string | number)[] = [q.feed];
   if (q.id) { where.push("p.id = ?"); args.push(q.id); }
+  if (q.highlights) where.push("(p.highlight = 1 OR lower(u.handle) = 'arctisans')"); // team picks, plus everything the official account posts
   if (q.skill) { where.push("lower(p.skill) = ?"); args.push(lc(q.skill)); }
   if (q.city) { where.push("lower(p.city) = ?"); args.push(lc(q.city)); }
   if (q.kind) { where.push("u.kind = ?"); args.push(q.kind); }

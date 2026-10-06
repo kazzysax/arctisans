@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS chain_state (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS job_messages (id TEXT PRIMARY KEY, job_id TEXT NOT NULL, sender TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS job_msgs ON job_messages(job_id, created_at);
 CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, n INTEGER NOT NULL, reset_at INTEGER NOT NULL);
+-- people ask the team to feature (kind='highlight') or remove (kind='delete') one of their own posts
+CREATE TABLE IF NOT EXISTS post_requests (id TEXT PRIMARY KEY, post_id TEXT NOT NULL, wallet TEXT NOT NULL, kind TEXT NOT NULL, note TEXT, status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS post_req_status ON post_requests(status, created_at);
 `;
 
 let migrated = false;
@@ -73,8 +76,16 @@ export async function migrate(c: Client = db()) {
   if (migrated && c === _db) return;
   await c.executeMultiple(SCHEMA);
   // additive columns (older databases): ignore 'duplicate column' errors
-  for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE posts ADD COLUMN source_url TEXT", "ALTER TABLE users ADD COLUMN cover TEXT", "ALTER TABLE posts ADD COLUMN video TEXT", "ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN verify_requested INTEGER NOT NULL DEFAULT 0"]) {
+  for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE posts ADD COLUMN source_url TEXT", "ALTER TABLE users ADD COLUMN cover TEXT", "ALTER TABLE posts ADD COLUMN video TEXT", "ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN verify_requested INTEGER NOT NULL DEFAULT 0", "ALTER TABLE posts ADD COLUMN highlight INTEGER NOT NULL DEFAULT 0"]) {
     try { await c.execute(sql); } catch { /* already there */ }
   }
+  // one-time: the only post featured at first is the owner's video (@kazzysax). Everything else is by request.
+  try {
+    const seeded = await c.execute("SELECT 1 FROM chain_state WHERE k='hl_seed_v1'");
+    if (!seeded.rows.length) {
+      await c.execute("UPDATE posts SET highlight=1 WHERE id=(SELECT p.id FROM posts p JOIN users u ON u.wallet=p.author_wallet WHERE u.handle='kazzysax' AND p.video IS NOT NULL ORDER BY p.created_at DESC LIMIT 1)");
+      await c.execute("INSERT OR IGNORE INTO chain_state(k,v) VALUES('hl_seed_v1','1')");
+    }
+  } catch { /* retried next start */ }
   if (c === _db) migrated = true;
 }

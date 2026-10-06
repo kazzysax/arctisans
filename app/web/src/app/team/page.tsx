@@ -7,6 +7,8 @@ import { Check } from "@/components/icons";
 type C = { key: string; label: string; ok: boolean; detail: string };
 type W = { handle: string; displayName: string; links: { label: string; url: string }[]; checks: C[]; meets: boolean };
 type F = { handle: string; displayName: string; verified: boolean; founding: boolean };
+type PC = { postId: string; handle: string; body: string; thumb: string | null; video: boolean };
+type Req = PC & { id: string; kind: string; note: string | null; at: number };
 
 // Team portal: review verification requests, grant or remove Verified and Founding by hand. No power over money.
 export default function Team() {
@@ -15,11 +17,14 @@ export default function Team() {
   const [found, setFound] = useState<F[]>([]);
   const [q, setQ] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  const [reqs, setReqs] = useState<Req[]>([]);
+  const [lights, setLights] = useState<PC[]>([]);
 
   const load = useCallback(async (query = "") => {
     const r = await fetch(`/api/admin/verify${query ? `?q=${encodeURIComponent(query)}` : ""}`);
     if (!r.ok) { setState("no"); return; }
     const j = await r.json(); setWaiting(j.waiting); setFound(j.found); setState("ok");
+    const pr = await fetch("/api/admin/posts"); if (pr.ok) { const pj = await pr.json(); setReqs(pj.requests); setLights(pj.highlights); }
   }, []);
   useEffect(() => { void load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
@@ -30,6 +35,17 @@ export default function Team() {
     setNote(r.ok ? `@${handle}: ${action} done` : j.error ?? "Failed");
     await load(q);
   }
+  async function post(body: Record<string, string>, done: string) {
+    setNote(null);
+    const r = await fetch("/api/admin/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json(); setNote(r.ok ? done : j.error ?? "Failed"); await load(q);
+  }
+  const Thumb = ({ p }: { p: PC }) => (
+    <Link href={`/p/${p.postId}`} className="flex min-w-0 flex-1 items-center gap-3">
+      {p.thumb ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.thumb} alt="" className="h-12 w-12 shrink-0 rounded-[12px] object-cover" /> : <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[12px] bg-[var(--img-bg)] text-[11px] text-faint">{p.video ? "Video" : "Text"}</span>}
+      <span className="min-w-0 text-[13px] leading-snug"><b>@{p.handle}</b><br /><span className="line-clamp-1 text-muted">{p.body || (p.video ? "Video post" : "Post")}</span></span>
+    </Link>
+  );
   const Btn = ({ onClick, children, solid }: { onClick: () => void; children: React.ReactNode; solid?: boolean }) => (
     <button onClick={onClick} className={`press rounded-full px-4 py-2 text-[13px] font-medium ${solid ? "bg-fg text-[var(--bg)]" : "hairline-strong"}`}>{children}</button>
   );
@@ -62,6 +78,27 @@ export default function Team() {
             <div className="mt-3 flex gap-2"><Btn solid onClick={() => act(w.handle, "verify")}>Verify</Btn><Btn onClick={() => act(w.handle, "decline")}>Decline</Btn></div>
           </div>
         ))}
+
+        <div className="label mt-8">Post requests · {reqs.length}</div>
+        {reqs.length === 0 && <p className="mt-2 text-[13px] text-faint">No requests.</p>}
+        {reqs.map((x) => (
+          <div key={x.id} className="mt-3 rounded-[18px] hairline p-3.5">
+            <div className="flex items-center gap-3"><Thumb p={x} /><span className="rounded-full bg-[var(--img-bg)] px-3 py-1 text-[11.5px] font-medium">{x.kind === "delete" ? "Delete" : "Highlight"}</span></div>
+            <div className="mt-3 flex gap-2">
+              <Btn solid onClick={() => post({ requestId: x.id, action: "approve" }, x.kind === "delete" ? "Post deleted" : "Added to Highlights")}>{x.kind === "delete" ? "Delete post" : "Add to Highlights"}</Btn>
+              <Btn onClick={() => post({ requestId: x.id, action: "decline" }, "Declined")}>Decline</Btn>
+            </div>
+          </div>
+        ))}
+
+        <div className="label mt-8">In Highlights · {lights.length}</div>
+        {lights.length === 0 && <p className="mt-2 text-[13px] text-faint">Nothing featured yet. Open any post and tap Add to Highlights.</p>}
+        {lights.map((x) => (
+          <div key={x.postId} className="mt-3 flex items-center gap-3 rounded-[18px] hairline p-3.5">
+            <Thumb p={x} /><Btn onClick={() => post({ postId: x.postId, action: "unhighlight" }, "Removed from Highlights")}>Remove</Btn>
+          </div>
+        ))}
+        <p className="mt-2 text-[12px] text-faint">Everything posted by the official @arctisans account appears in Highlights automatically.</p>
 
         <div className="label mt-8">Official account</div>
         <div className="mt-2 flex items-center gap-3 rounded-[20px] hairline p-4">

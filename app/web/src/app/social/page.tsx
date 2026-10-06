@@ -10,7 +10,7 @@ import { PullToRefresh } from "@/components/fun/PullToRefresh";
 import { CraftArt } from "@/components/CraftArt";
 import { CRAFTS } from "@/lib/crafts";
 import { AddToHome } from "@/components/AddToHome";
-import { discover as sampleDiscover, following as sampleFollowing, type Post } from "@/lib/demo";
+import { following as sampleFollowing, type Post } from "@/lib/demo";
 
 
 type FeedItem = {
@@ -80,7 +80,7 @@ export default function Social() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    fetch("/api/posts?feed=work&limit=8", { credentials: "include" })
+    fetch("/api/posts?feed=work&highlights=1&limit=12", { credentials: "include" })
       .then((r) => r.json())
       .then((j: { items?: FeedItem[] }) => setDiscover(j.items ?? []))
       .catch(() => setDiscover([]));
@@ -136,12 +136,13 @@ export default function Social() {
         <AddToHome />
 
         <div className="pt-8">
-          <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Art</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Latest art</SectionTitle>
+          <SectionTitle action={<div className="flex gap-1.5 text-[12px]"><span className="rounded-full bg-pill px-3 py-1.5 font-medium text-pill-fg">Art</span><Link href="/search" className="rounded-full hairline px-3 py-1.5 text-muted">Requests</Link></div>}>Highlights</SectionTitle>
           {discover === null ? (
             <div className="mt-4"><Skeleton count={3} horizontal /></div>
           ) : (
             <HScroll className="mt-4 flex snap-x snap-mandatory gap-3 scroll-px-5 px-5">
-              {[...discover.map(toPost), ...sampleDiscover].map((post) => <DiscoverCard key={post.id} post={post} />)}
+              {discover.length === 0 && <p className="px-1 text-[13px] text-faint">Nothing here yet. The team picks Highlights.</p>}
+              {discover.map(toPost).map((post) => <DiscoverCard key={post.id} post={post} />)}
             </HScroll>
           )}
         </div>

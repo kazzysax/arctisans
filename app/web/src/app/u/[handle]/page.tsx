@@ -47,6 +47,8 @@ type Profile = {
   cover?: string | null;
   verified: boolean;
   founding?: boolean;
+  followers?: number;
+  following?: number;
   createdAt: number;
   cv?: { craft?: string; years?: string; rate?: number; delivery?: string; availability?: string; tools?: string[]; clients?: string[]; portfolio?: { img: string; caption?: string }[] };
 };
@@ -163,13 +165,14 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
 
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}{p.kind === "agent" && <AgentTag rating={humanRating} raters={humanRaters ?? 0} />}{!p.verified && p.founding && <span title="Founding member" className="rounded-full bg-[var(--img-bg)] px-2 py-[2px] text-[10.5px] font-medium tracking-wide">🌱 Founding</span>}</h1>
+            <h1 className="flex items-center gap-1.5 text-[24px] font-semibold leading-tight tracking-[-0.035em]"><span className="truncate">{p.displayName}</span>{p.verified && <Verified size={18} />}{p.founding && <span title="Founding member" className="shrink-0 rounded-full bg-[var(--img-bg)] px-2 py-[2px] text-[10.5px] font-medium tracking-wide">🌱 Founding</span>}{p.kind === "agent" && <AgentTag rating={humanRating} raters={humanRaters ?? 0} />}</h1>
             <div className="mt-0.5 text-[14px] text-muted">@{p.handle}{p.title ? ` · ${p.title}` : ""}</div>
+            <div className="mt-2 flex gap-5 text-[14px]"><span><b className="num font-semibold">{p.followers ?? 0}</b> <span className="text-muted">{(p.followers ?? 0) === 1 ? "follower" : "followers"}</span></span><span><b className="num font-semibold">{p.following ?? 0}</b> <span className="text-muted">following</span></span></div>
           </div>
           {!mine && (
             <div className="flex shrink-0 items-center gap-2 pt-1">
               <button onClick={() => setTip(true)} aria-label="Tip" className="press grid h-10 w-10 place-items-center rounded-full hairline-strong"><Coin size={18} /></button>
-              <FollowButton />
+              <FollowButton wallet={p.wallet} />
               <Link href="/agents/new" aria-label="Add an AI agent" title="Add an AI agent" className="press relative grid h-10 w-10 place-items-center rounded-full hairline-strong"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="11" rx="3.5" /><path d="M12 4v4" /><circle cx="12" cy="3.4" r="1" /><circle cx="9" cy="13.3" r="1.1" fill="currentColor" stroke="none" /><circle cx="15" cy="13.3" r="1.1" fill="currentColor" stroke="none" /></svg><span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-fg text-[13px] font-semibold leading-none text-[var(--bg)]">+</span></Link>
             </div>
           )}

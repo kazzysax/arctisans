@@ -82,7 +82,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               <div className="text-[12.5px] text-muted">{p.title}{demo ? " · sample post" : p.jobs ? ` · ${p.jobs} paid jobs · ${f.onTime}% on time` : ""}</div>
             </div>
           </Link>
-          {!demo && <FollowButton size="sm" />}
+          {!demo && <FollowButton size="sm" wallet={post.to} />}
         </div>
         <div className="mt-5 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-faint"><span>{post.skill}</span><span className="h-[3px] w-[3px] rounded-full bg-faint" /><span>{post.ago}</span></div>
         <p className="mt-2 text-[18px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p>

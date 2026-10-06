@@ -56,7 +56,7 @@ export function DiscoverCard({ post }: { post: Post }) {
             <div className="truncate text-[11px] text-white/60">{p.title}{post.demo ? " · sample" : p.jobs ? ` · ${p.jobs} jobs` : ""}</div>
           </div>
         </Link>
-        {!post.demo && <FollowButton onPhoto size="sm" />}
+        {!post.demo && <FollowButton onPhoto size="sm" wallet={post.to} />}
       </div>
 
       {/* caption */}

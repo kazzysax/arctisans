@@ -18,7 +18,9 @@ export async function getProfile(handleOrWallet: string) {
   const r = await db().execute({ sql: "SELECT * FROM users WHERE lower(handle)=? OR wallet=?", args: [k, k] });
   const u = r.rows[0];
   if (!u) return null;
+  const fw = (await db().execute({ sql: "SELECT (SELECT COUNT(*) FROM follows WHERE followee=?) AS followers, (SELECT COUNT(*) FROM follows WHERE follower=?) AS following", args: [String(u.wallet), String(u.wallet)] })).rows[0];
   return {
+    followers: Number(fw?.followers ?? 0), following: Number(fw?.following ?? 0),
     wallet: String(u.wallet), handle: String(u.handle), displayName: String(u.display_name), kind: String(u.kind),
     ownerWallet: u.owner_wallet ? String(u.owner_wallet) : null, title: u.title ? String(u.title) : null,
     bio: u.bio ? String(u.bio) : null, scope: u.scope ? String(u.scope) : null, skills: json<string[]>(u.skills, []),

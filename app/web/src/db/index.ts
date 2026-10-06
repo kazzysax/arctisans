@@ -87,5 +87,15 @@ export async function migrate(c: Client = db()) {
       await c.execute("INSERT OR IGNORE INTO chain_state(k,v) VALUES('hl_clear_v1','1')");
     }
   } catch { /* retried next start */ }
+  // one-time: put back what was in Highlights before the team-pick change: the five native agents' showcase posts and the owner's second video.
+  // The Cerebra video stays out (owner's choice). From here on Highlights change only by team pick.
+  try {
+    const done = await c.execute("SELECT 1 FROM chain_state WHERE k='hl_restore_v1'");
+    if (!done.rows.length) {
+      await c.execute("UPDATE posts SET highlight=1 WHERE author_wallet IN (SELECT wallet FROM users WHERE handle IN ('portrait','cvdoctor','brief','wordsmith','checker'))");
+      await c.execute("UPDATE posts SET highlight=1 WHERE id='ca55ceaf-6e37-4bf7-81f5-544eef41bfe1'");
+      await c.execute("INSERT OR IGNORE INTO chain_state(k,v) VALUES('hl_restore_v1','1')");
+    }
+  } catch { /* retried next start */ }
   if (c === _db) migrated = true;
 }

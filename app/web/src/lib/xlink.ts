@@ -248,8 +248,8 @@ async function processMention(m: XTweet, media: Map<string, XMedia>, handle: str
     let parent: XTweet | null = null, parentMedia: XMedia[] = [];
     const rt = m.referenced_tweets?.find((r) => r.type === "replied_to");
     if (link && rt && isCommand && !m.attachments?.media_keys?.length) {
-      const p = (await bearer(`/tweets/${rt.id}?${FIELDS}`)) as { data: XTweet; includes?: { media?: XMedia[] } };
-      parent = p.data; parentMedia = p.includes?.media ?? [];
+      const p = (await bearer(`/tweets/${rt.id}?${FIELDS}`)) as { data?: XTweet; includes?: { media?: XMedia[] } };
+      parent = p.data ?? null; parentMedia = p.includes?.media ?? [];
     }
     const pick = pickImport(m, parent, { linkedXId: link ? String(link.x_id) : null, handle });
     if (!pick.ok) {
@@ -293,7 +293,11 @@ export async function pollMentions() {
   try {
     const handle = botHandle();
     let botId = await getState("x_bot_id");
-    if (!botId) { botId = ((await bearer(`/users/by/username/${handle}`)) as { data: { id: string } }).data.id; await setState("x_bot_id", botId); }
+    if (!botId) {
+      const u = (await bearer(`/users/by/username/${handle}`)) as { data?: { id: string } };
+      if (!u.data) throw new Error(`X account @${handle} not found`);
+      botId = u.data.id; await setState("x_bot_id", botId);
+    }
     // New mentions since the last one we saw (up to 3 pages), handled oldest first.
     const since = await getState("x_since_v3");
     const found: XTweet[] = []; const media = new Map<string, XMedia>(); let newest: string | null = null, page: string | null = null;
@@ -303,7 +307,11 @@ export async function pollMentions() {
       newest ??= res.meta?.newest_id ?? null; page = res.meta?.next_token ?? null;
       if (!page || !since) break; // first ever run: only the latest page, never crawl old history
     }
-    for (const m of found.reverse()) out.push({ tweet: m.id, result: await processMention(m, media, handle) });
+    for (const m of found.reverse()) {
+      if (!m?.id || typeof m.text !== "string") continue;
+      try { out.push({ tweet: m.id, result: await processMention(m, media, handle) }); }
+      catch (e) { out.push({ tweet: m.id, result: `error: ${(e as Error).message}` }); } // one bad mention never blocks the rest
+    }
     if (newest) await setState("x_since_v3", newest);
 
     // Retry recent failures (X hiccup, download error): at most 3 tries each, 3 per run.
@@ -311,8 +319,14 @@ export async function pollMentions() {
     for (const r of retry) {
       const id = String(r.tweet_id);
       if (out.some((o) => o.tweet === id)) continue;
-      const t = (await bearer(`/tweets/${id}?${FIELDS}`)) as { data: XTweet; includes?: { media?: XMedia[] } };
-      out.push({ tweet: id, result: `retry: ${await processMention(t.data, new Map((t.includes?.media ?? []).map((x) => [x.media_key, x])), handle)}` });
+      try {
+        const t = (await bearer(`/tweets/${id}?${FIELDS}`)) as { data?: XTweet; includes?: { media?: XMedia[] } };
+        if (!t.data) { // deleted or hidden on X: stop retrying it
+          await db().execute({ sql: "UPDATE x_imports SET attempts=3, reason='post no longer on X' WHERE tweet_id=?", args: [id] });
+          out.push({ tweet: id, result: "retry: post no longer on X, dropped" }); continue;
+        }
+        out.push({ tweet: id, result: `retry: ${await processMention(t.data, new Map((t.includes?.media ?? []).map((x) => [x.media_key, x])), handle)}` });
+      } catch (e) { out.push({ tweet: id, result: `retry error: ${(e as Error).message}` }); }
     }
     await retryReplies().catch(() => {});
     await setState("x_poll_last", stamp(`ok, ${found.length} new${out.length ? `: ${out.map((o) => o.result.split(" as ")[0].split(":")[0]).join(", ")}` : ""}`));

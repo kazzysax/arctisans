@@ -2,6 +2,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { ok, fail, route } from "@/lib/api";
 import { requireSession, realAdmin, isAdminWallet } from "@/lib/session";
+import { deletePostAndMedia } from "@/lib/postdelete";
 
 // Owner side: ask the team to feature (highlight) or remove one of your own posts. Only the team can actually do either.
 async function status(postId: string, wallet: string, req: Request) {
@@ -27,4 +28,14 @@ export const POST = route("post-request", 20, async (req) => {
   if (s.pending.includes(b.kind)) return fail(400, "Already asked, the team will review it");
   await db().execute({ sql: "INSERT INTO post_requests(id,post_id,wallet,kind,note,status,created_at) VALUES(?,?,?,?,?,'pending',?)", args: [crypto.randomUUID(), b.postId, wallet.toLowerCase(), b.kind, b.note?.trim() || null, Date.now()] });
   return ok({ requested: b.kind });
+});
+
+// The owner deletes their own post, with its video and pictures. No approval needed.
+export const DELETE = route("post-delete", 20, async (req) => {
+  const { wallet } = requireSession(req);
+  const { postId } = z.object({ postId: z.string().uuid() }).parse(await req.json());
+  const s = await status(postId, wallet, req);
+  if (!s) return fail(404, "Not found");
+  if (!s.owner) return fail(403, "Only the owner can delete this post");
+  return ok(await deletePostAndMedia(postId));
 });

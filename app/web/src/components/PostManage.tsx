@@ -15,12 +15,18 @@ export function PostManage({ postId }: { postId: string }) {
   }, [postId]);
   if (!s || (!s.owner && !s.admin)) return null;
 
-  async function ask(kind: "highlight" | "delete") {
-    if (kind === "delete" && !confirm("Ask the team to delete this post?")) return;
+  async function ask(kind: "highlight") {
     setBusy(true); setMsg(null);
     const r = await fetch("/api/posts/manage", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postId, kind }) });
     const j = await r.json(); setBusy(false);
     if (r.ok) { setS((v) => v && { ...v, pending: [...v.pending, kind] }); setMsg("Sent to the team. They will review it."); } else setMsg(j.error ?? "Could not send");
+  }
+  async function removeMine() {
+    if (!confirm("Delete this post for good? Its picture or video is removed too.")) return;
+    setBusy(true); setMsg(null);
+    const r = await fetch("/api/posts/manage", { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postId }) });
+    const j = await r.json(); setBusy(false);
+    if (r.ok) router.replace("/social"); else setMsg(j.error ?? "Could not delete");
   }
   async function act(action: "highlight" | "unhighlight" | "delete") {
     if (action === "delete" && !confirm("Delete this post for good?")) return;
@@ -46,7 +52,7 @@ export function PostManage({ postId }: { postId: string }) {
           <>
             {s.highlight ? <span className="rounded-full bg-[var(--img-bg)] px-4 py-2 text-[13px] font-medium">In Highlights</span>
               : <button disabled={busy || has("highlight")} onClick={() => ask("highlight")} className={b}>{has("highlight") ? "Highlight requested" : "Apply for Highlights"}</button>}
-            <button disabled={busy || has("delete")} onClick={() => ask("delete")} className={b}>{has("delete") ? "Delete requested" : "Request delete"}</button>
+            <button disabled={busy} onClick={removeMine} className={b}>Delete post</button>
           </>
         )}
       </div>

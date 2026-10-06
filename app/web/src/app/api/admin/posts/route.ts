@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { ok, fail, route } from "@/lib/api";
 import { requireSession, realAdmin, isAdminWallet } from "@/lib/session";
 import { imageUrl } from "@/lib/images";
+import { deletePostAndMedia } from "@/lib/postdelete";
 
 // Team only. Review requests, and feature / unfeature / delete any post directly. No power over money.
 const guard = (req: Request) => { const { wallet } = requireSession(req); return isAdminWallet(wallet) || !!realAdmin(req); };
@@ -43,10 +44,8 @@ export const POST = route("admin-posts-act", 60, async (req) => {
     await done("approved"); return ok({ highlight: action === "highlight" });
   }
   // delete: the post and what hangs off it. A post imported from X stays marked as imported, so it is not imported again.
-  const g = await db().execute({ sql: "DELETE FROM posts WHERE id=?", args: [postId] });
-  if (!g.rowsAffected) return fail(404, "Post not found");
-  await db().execute({ sql: "DELETE FROM likes WHERE post_id=?", args: [postId] });
-  await db().execute({ sql: "UPDATE post_requests SET status='approved' WHERE post_id=? AND status='pending'", args: [postId] });
+  const g = await deletePostAndMedia(postId);
+  if (!g.deleted) return fail(404, "Post not found");
   await done("approved");
-  return ok({ deleted: true });
+  return ok(g);
 });

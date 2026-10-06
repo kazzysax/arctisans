@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/ui";
 
 type Status = { enabled: boolean; bot: string; link: { username: string; linkedAt: number } | null };
-type Bot = { connected: boolean; handle: string; lastReply?: string };
+type Bot = { connected: boolean; handle: string; lastReply?: string; health?: string; lastPoll?: string };
 
 function XSettings() {
   const sp = useSearchParams();
@@ -68,7 +68,9 @@ function XSettings() {
           <div className="mt-4 rounded-[24px] hairline p-5">
             <div className="text-[15px] font-medium">Admin: @{botInfo.handle} replies</div>
             <p className="mt-1 text-[12.5px] text-muted">{sp.get("bot") ? `Connected as @${sp.get("bot")}.` : botInfo.connected ? "Connected. The bot can reply on X." : "Not connected. Sign in to X as the bot account once, so it can reply."}</p>
-            {botInfo.lastReply && <p className="mt-2 break-words text-[11.5px] text-faint">Last reply on X: {botInfo.lastReply}</p>}
+            {botInfo.health?.includes("RECONNECT") && <p className="mt-2 break-words text-[12px] font-semibold text-red-600">The bot&apos;s X login stopped working. Tap Reconnect below.</p>}
+            {botInfo.lastPoll && <p className="mt-2 break-words text-[11.5px] text-faint">Last check: {botInfo.lastPoll}</p>}
+            {botInfo.lastReply && <p className="mt-1 break-words text-[11.5px] text-faint">Last reply on X: {botInfo.lastReply}</p>}
             {!sp.get("bot") && <button disabled={busy} onClick={connectBot} className="btn btn-solid mt-3 w-full">{botInfo.connected ? "Reconnect" : "Connect"} @{botInfo.handle}</button>}
           </div>
         )}

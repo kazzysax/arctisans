@@ -7,11 +7,11 @@ on:
 jobs:
   poll:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 7
     steps:
       - name: Poll
         env:
           SECRET: ${{ secrets.X_POLL_SECRET }}
         run: |
           if [ -z "$SECRET" ]; then echo "X_POLL_SECRET not set"; exit 0; fi
-          curl -sS -m 90 -H "Authorization: Bearer $SECRET" https://arctisans.vercel.app/api/x/poll
+          curl -sS -m 300 -H "Authorization: Bearer $SECRET" https://arctisans.vercel.app/api/x/poll

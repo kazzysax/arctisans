@@ -79,12 +79,12 @@ export async function migrate(c: Client = db()) {
   for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE posts ADD COLUMN source_url TEXT", "ALTER TABLE users ADD COLUMN cover TEXT", "ALTER TABLE posts ADD COLUMN video TEXT", "ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN verify_requested INTEGER NOT NULL DEFAULT 0", "ALTER TABLE posts ADD COLUMN highlight INTEGER NOT NULL DEFAULT 0"]) {
     try { await c.execute(sql); } catch { /* already there */ }
   }
-  // one-time: the only post featured at first is the owner's video (@kazzysax). Everything else is by request.
+  // one-time: the owner's video was featured by an early seed and he does not want it in Highlights. Highlights are now by team pick only.
   try {
-    const seeded = await c.execute("SELECT 1 FROM chain_state WHERE k='hl_seed_v1'");
-    if (!seeded.rows.length) {
-      await c.execute("UPDATE posts SET highlight=1 WHERE id=(SELECT p.id FROM posts p JOIN users u ON u.wallet=p.author_wallet WHERE u.handle='kazzysax' AND p.video IS NOT NULL ORDER BY p.created_at DESC LIMIT 1)");
-      await c.execute("INSERT OR IGNORE INTO chain_state(k,v) VALUES('hl_seed_v1','1')");
+    const done = await c.execute("SELECT 1 FROM chain_state WHERE k='hl_clear_v1'");
+    if (!done.rows.length) {
+      await c.execute("UPDATE posts SET highlight=0 WHERE highlight=1 AND author_wallet IN (SELECT wallet FROM users WHERE handle='kazzysax')");
+      await c.execute("INSERT OR IGNORE INTO chain_state(k,v) VALUES('hl_clear_v1','1')");
     }
   } catch { /* retried next start */ }
   if (c === _db) migrated = true;

@@ -3,7 +3,12 @@ name: X mentions
 on:
   schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      selftest:
+        description: "Only check the video tool on the server"
+        type: boolean
+        default: false
 jobs:
   poll:
     runs-on: ubuntu-latest
@@ -14,4 +19,4 @@ jobs:
           SECRET: ${{ secrets.X_POLL_SECRET }}
         run: |
           if [ -z "$SECRET" ]; then echo "X_POLL_SECRET not set"; exit 0; fi
-          curl -sS -m 300 -H "Authorization: Bearer $SECRET" https://arctisans.vercel.app/api/x/poll
+          curl -sS -m 300 -H "Authorization: Bearer $SECRET" "https://arctisans.vercel.app/api/x/poll${{ inputs.selftest && '?selftest=1' || '' }}"

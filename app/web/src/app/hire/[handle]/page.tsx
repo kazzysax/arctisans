@@ -9,9 +9,9 @@ import { Check, Plus } from "@/components/icons";
 // Agreement builder. Both sides agree these rules BEFORE any money moves; they are fingerprinted onchain.
 type Plan = "upfront" | "full" | "milestones";
 const RULES = [
-  { id: "Split5050", t: "Split 50/50", d: "The frozen part is shared equally" },
-  { id: "ToClient", t: "Back to client", d: "Safer for the client" },
-  { id: "ToArtisan", t: "To the artisan", d: "For trusted, repeat work" },
+  { id: "Split5050", t: "Share it equally", d: "Half back to the client, half to the artisan" },
+  { id: "ToClient", t: "Return it to the client", d: "All of it goes back to the client" },
+  { id: "ToArtisan", t: "Pay the artisan", d: "All of it goes to the artisan" },
 ] as const;
 
 export default function Hire({ params }: { params: Promise<{ handle: string }> }) {
@@ -71,7 +71,8 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
       if (res.status === 401) { r.push("/signup"); return; }
       if (!res.ok) throw new Error(j.error ?? "Could not create the agreement");
       setJobId(j.id);
-      if (circleReady()) await sendCalls(j.calls as Call[]); // propose onchain (gasless), user approves in Circle's window
+      if (!circleReady()) throw new Error("Your wallet is not connected, so the agreement could not be signed. Open it from Jobs and sign it there.");
+      await sendCalls(j.calls as Call[]); // propose onchain (gasless), user approves in Circle's window
       setStep(2);
     } catch (e) { setErr((e as Error).message); } finally { setSending(false); }
   }
@@ -146,7 +147,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
                   <button onClick={() => setDays(Math.max(1, days - 1))} className="press h-9 w-9 rounded-full text-[18px] text-muted">−</button><span className="num text-[15px]">{days}d · {deadline}</span><button onClick={() => setDays(Math.min(60, days + 1))} className="press h-9 w-9 rounded-full text-[18px] text-muted">+</button></div></div>
             </div>
 
-            <div className="flex flex-col gap-2"><span className="label">If you can&apos;t agree</span>
+            <div className="flex flex-col gap-2"><span className="label">If you two disagree about the work</span>
               <div className="overflow-hidden rounded-[20px] hairline">
                 {RULES.map((r, i) => (
                   <button key={r.id} onClick={() => setRule(r.id)} className={`flex w-full items-center gap-3 px-4 py-3.5 text-left ${i ? "border-t border-line" : ""}`}>
@@ -155,7 +156,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
                   </button>
                 ))}
               </div>
-              <span className="text-[12px] leading-relaxed text-faint">Either of you can offer a split at any time. If nobody accepts within 48 hours, this rule applies. No one judges, not even us.</span>
+              <span className="text-[12px] leading-relaxed text-faint">Only the money still in escrow is affected. Money already paid out stays paid. If either of you opens a disagreement and you cannot agree how to share what is left within 48 hours, this choice decides it automatically. Nobody at Arctisans decides, and nobody can take a cut.</span>
             </div>
           </div>
         ) : (

@@ -1,4 +1,5 @@
 "use client";
+import { useLike } from "./fun/useLike";
 import { useState, ViewTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,11 +16,11 @@ export function FeedPost({ post }: { post: Post }) {
   const p: Person = post.author ?? people[post.by] ?? { handle: post.by, name: post.by, title: "Arctisan", city: "", avatar: "/demo/bg_blue_soft.jpg", kind: "human", jobs: 0, rating: null };
   const r = useRouter();
   const [i, setI] = useState(0);
-  const [liked, setLiked] = useState(false);
+  const { liked, count, toggle } = useLike(post.id, post.likes);
   const [burst, setBurst] = useState(0);
   const [tip, setTip] = useState(false);
   const n = post.video ? 1 : post.photos.length;
-  const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { setLiked(true); setBurst((b) => b + 1); });
+  const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { void toggle("on").then((on) => { if (on) setBurst((b) => b + 1); }); });
   return (
     <article className="overflow-hidden rounded-[28px] hairline bg-bg-2">
       <header className="flex items-center gap-3 p-3.5">
@@ -61,8 +62,8 @@ export function FeedPost({ post }: { post: Post }) {
       </div>
 
       <div className="flex items-center gap-1 px-3.5 pt-3">
-        <button onClick={() => { setLiked(!liked); if (!liked) setBurst((b) => b + 1); }} aria-pressed={liked} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted">
-          <Heart key={String(liked)} size={20} className={liked ? "fill-current text-fg" : ""} /> {post.likes + (liked ? 1 : 0)}
+        <button onClick={() => { void toggle().then((on) => { if (on) setBurst((b) => b + 1); }); }} aria-pressed={liked} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted">
+          <Heart key={String(liked)} size={20} className={liked ? "fill-current text-fg" : ""} /> {count}
         </button>
         {!post.demo && <button onClick={() => setTip(true)} className="press flex h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-muted"><Coin size={20} /> Tip</button>}
         <div className="flex-1" />

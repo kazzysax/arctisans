@@ -4,15 +4,15 @@ import { Sheet } from "./ui";
 import { CoinDrop } from "./fun/CoinDrop";
 import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 
-const PRESETS = [1, 2, 5];
+const PRESETS = [0.1, 1, 5];
 export function TipSheet({ open, onClose, name, avatar, to, postId }: { open: boolean; onClose: () => void; name: string; avatar: string; to?: string; postId?: string }) {
-  const [amt, setAmt] = useState<number | null>(2);
+  const [amt, setAmt] = useState<number | null>(1);
   const [custom, setCustom] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const value = custom ? Number(custom) : amt ?? 0;
-  const ok = value >= 0.5 && value <= 100;
+  const ok = value >= 0.1 && value <= 100;
   async function send() {
     setErr(null);
     if (!to || !circleReady()) { setDone(true); return; } // demo path: no wallet to charge
@@ -22,7 +22,8 @@ export function TipSheet({ open, onClose, name, avatar, to, postId }: { open: bo
       const j = await res.json();
       if (res.status === 401) { setErr("Please sign in to send a tip."); return; }
       if (!res.ok) throw new Error(j.error ?? "Could not send the tip");
-      await sendCalls(j.calls as Call[]);
+      const hash = await sendCalls(j.calls as Call[]);
+      if (hash && Math.round(value * 1e6) < 500_000) await fetch("/api/tip/record", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hash, ...(postId ? { postId } : {}) }) }).catch(() => null);
       setDone(true);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
@@ -52,7 +53,7 @@ export function TipSheet({ open, onClose, name, avatar, to, postId }: { open: bo
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-faint">$</span>
             <input inputMode="decimal" placeholder="Other amount" value={custom} onChange={(e) => setCustom(e.target.value.replace(/[^\d.]/g, ""))} className="field num pl-8" />
           </div>
-          <p className="mt-2 text-[12px] text-faint">Minimum $0.50. No fee.</p>
+          <p className="mt-2 text-[12px] text-faint">Minimum $0.10. No fee.</p>
           {err && <p className="mt-3 text-[13px] text-fg">{err}</p>}
           <button disabled={!ok || busy} onClick={send} className="btn btn-solid mt-6 w-full">{busy ? "Waiting for approval…" : `Send $${ok ? value.toFixed(2) : "0.00"}`}</button>
         </>

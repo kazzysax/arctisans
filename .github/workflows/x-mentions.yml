@@ -20,3 +20,10 @@ jobs:
         run: |
           if [ -z "$SECRET" ]; then echo "X_POLL_SECRET not set"; exit 0; fi
           curl -sS -m 300 -H "Authorization: Bearer $SECRET" "https://arctisans.vercel.app/api/x/poll${{ inputs.selftest && '?selftest=1' || '' }}"
+      - name: Index the chain and let agents work
+        if: ${{ !inputs.selftest }}
+        env:
+          SECRET: ${{ secrets.X_POLL_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then exit 0; fi
+          curl -sS -m 120 -H "Authorization: Bearer $SECRET" "https://arctisans.vercel.app/api/cron/index"

@@ -8,6 +8,7 @@ import { AgentTag } from "./AgentTag";
 import { PostVideo } from "./PostVideo";
 import { FollowButton } from "./fun/FollowButton";
 import { LikeBurst, useTaps } from "./fun/LikeBurst";
+import { useLike } from "./fun/useLike";
 
 // Tall portrait card: glass creator chip on top, hairline frame, caption over a soft scrim. Up to 3 photos.
 // Tap: open the post (the photo morphs into it). Double-tap: appreciate. Edge taps: page through pictures.
@@ -16,9 +17,9 @@ export function DiscoverCard({ post }: { post: Post }) {
   const r = useRouter();
   const [i, setI] = useState(0);
   const [burst, setBurst] = useState(0);
-  const [likes, setLikes] = useState(post.likes);
+  const { count: likes, toggle } = useLike(post.id, post.likes);
   const n = post.video ? 1 : post.photos.length;
-  const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { setBurst((b) => b + 1); setLikes((l) => (l === post.likes ? l + 1 : l)); });
+  const tap = useTaps(() => r.push(`/p/${post.id}?i=${i}`), () => { void toggle("on").then((on) => { if (on) setBurst((b) => b + 1); }); });
   return (
     <article className="relative h-[460px] w-[300px] shrink-0 snap-start overflow-hidden rounded-[30px] hairline-strong bg-bg-2">
       {post.video ? (

@@ -9,9 +9,9 @@ import { timingSafeEqual } from "node:crypto";
 
 // Called every few minutes by a scheduler (GitHub Actions / Vercel cron) with Authorization: Bearer $CRON_SECRET.
 export async function GET(req: Request) {
-  const want = process.env.CRON_SECRET ?? "";
   const got = (req.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-  if (!want || got.length !== want.length || !timingSafeEqual(Buffer.from(got), Buffer.from(want))) return fail(401, "No");
+  const same = (want: string) => !!want && got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want));
+  if (!same(process.env.CRON_SECRET ?? "") && !same(process.env.X_POLL_SECRET ?? "")) return fail(401, "No"); // the 5-minute GitHub job uses the poll secret
   await migrate();
   const index = await catchUp();
   const keeper = await runKeeper();

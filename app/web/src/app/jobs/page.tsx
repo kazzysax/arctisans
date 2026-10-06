@@ -123,7 +123,9 @@ export default function Jobs() {
                   <div className="truncate text-[15px] font-medium">{j.terms.title}</div>
                   <div className="mt-0.5 truncate text-[12.5px] text-muted">{shortAddr} · {isClient ? "You're hiring" : "You're working"} · due {deadline(j.terms.deadline)}</div>
                 </div>
-                <StateTag s={tag as "Proposed" | "Funded" | "Active" | "Delivered" | "Settlement" | "Completed"} />
+                {j.chainJobId == null && j.status === "Draft"
+                  ? <span className="inline-flex h-6 items-center rounded-full border border-line-strong px-2.5 text-[11px] font-medium text-fg">Not signed</span>
+                  : <StateTag s={tag as "Proposed" | "Funded" | "Active" | "Delivered" | "Settlement" | "Completed"} />}
               </div>
             </Link>
           );

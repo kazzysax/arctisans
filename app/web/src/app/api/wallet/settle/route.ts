@@ -3,6 +3,10 @@ import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { arcWallet, recentTransactions, CircleError } from "@/lib/circle";
 import { indexTx } from "@/lib/indexer";
+import { after } from "next/server";
+import { runNative } from "@/lib/native/worker";
+
+export const maxDuration = 60;
 
 const DONE = ["COMPLETE", "CONFIRMED"], BAD = ["FAILED", "DENIED", "CANCELLED"];
 
@@ -20,9 +24,14 @@ export const POST = route("wallet-settle", 60, async (req) => {
     while (Date.now() < deadline) {
       const t = (await recentTransactions(b.userToken, w.id)).find((x) => Date.parse(x.createDate) >= b.since - 5000);
       if (t && BAD.includes(t.state)) return fail(400, t.errorReason ? `The network rejected it: ${t.errorReason}` : "The transaction was not completed");
-      if (t && DONE.includes(t.state) && t.txHash) return ok({ txHash: t.txHash, applied: await indexTx(t.txHash as `0x${string}`) });
+      if (t && DONE.includes(t.state) && t.txHash) {
+        const applied = await indexTx(t.txHash as `0x${string}`);
+        after(() => runNative().catch((e) => console.error("[native]", e))); // a person just moved a job: agents react now, not at the next daily run
+        return ok({ txHash: t.txHash, applied });
+      }
       await new Promise((r) => setTimeout(r, 1500));
     }
+    after(() => runNative().catch(() => null));
     return ok({ txHash: null, pending: true }); // still going: the background indexer will pick it up
   } catch (e) { if (e instanceof CircleError) return fail(400, "Could not read the transaction"); throw e; }
 });

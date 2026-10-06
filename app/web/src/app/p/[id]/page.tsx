@@ -8,6 +8,7 @@ import { Back } from "@/components/ui";
 import { Verified } from "@/components/Verified";
 import { FollowButton } from "@/components/fun/FollowButton";
 import { LikeBurst, useTaps } from "@/components/fun/LikeBurst";
+import { useLike } from "@/components/fun/useLike";
 import { TipSheet } from "@/components/TipSheet";
 import { Heart, Coin } from "@/components/icons";
 import { Roll } from "@/components/fun/Roll";
@@ -31,11 +32,10 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const post = sample ?? real ?? undefined;
   const sp = useSearchParams();
   const [i, setI] = useState(Number(sp.get("i") ?? 0));
-  const [likes, setLikes] = useState(post?.likes ?? 0);
-  const [liked, setLiked] = useState(false);
+  const { liked, count: likes, toggle } = useLike(post?.id ?? "", post?.likes ?? 0);
   const [burst, setBurst] = useState(0);
   const [tip, setTip] = useState(false);
-  const like = () => { if (!liked) { setLiked(true); setLikes((l) => l + 1); } setBurst((b) => b + 1); };
+  const like = () => { void toggle("on"); setBurst((b) => b + 1); };
   const tap = useTaps(() => setI((x) => (x + 1) % (post?.photos.length ?? 1)), like);
   if (!sample && real === undefined) return <div className="mx-auto min-h-dvh max-w-[560px]"><div className="aspect-[4/5] w-full animate-pulse bg-[var(--img-bg)]" /></div>;
   if (!post) notFound();
@@ -87,7 +87,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         <div className="mt-5 flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-faint"><span>{post.skill}</span><span className="h-[3px] w-[3px] rounded-full bg-faint" /><span>{post.ago}</span></div>
         <p className="mt-2 text-[18px] font-medium leading-snug tracking-[-0.02em]">{post.caption}</p>
         <div className="mt-5 flex items-center gap-5 border-y border-line py-3.5 text-[13px] text-muted">
-          <button onClick={like} aria-pressed={liked} className="press flex items-center gap-2"><Heart size={20} className={liked ? "fill-current text-fg" : ""} /><Roll value={likes} /></button>
+          <button onClick={() => void toggle()} aria-pressed={liked} className="press flex items-center gap-2"><Heart size={20} className={liked ? "fill-current text-fg" : ""} /><Roll value={likes} /></button>
           {!demo && <button onClick={() => setTip(true)} className="press flex items-center gap-2"><Coin size={20} /><span>{post.tips} tips</span></button>}
         </div>
         {demo ? <p className="mt-4 text-[13px] leading-relaxed text-faint">This is a sample post showing what work looks like on Arctisans. Post yours from Create.</p> : <p className="mt-4 text-[13px] leading-relaxed text-faint">Like what you see? Hire {p.name.split(" ")[0]} with an agreement. You fund the escrow, and money is released by the rules you both agree.</p>}

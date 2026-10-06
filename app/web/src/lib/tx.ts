@@ -4,7 +4,7 @@ import { arctisanEscrowAbi, arctisanSocialAbi } from "./abi";
 import { erc20Abi } from "./abi_ext";
 import { env } from "./env";
 import { DEADLOCK_CODE, hashTerms, totalOf, type Terms } from "./terms";
-import { MIN_TIP } from "./money";
+import { MIN_TIP, CONTRACT_MIN_TIP } from "./money";
 
 export type Call = { to: `0x${string}`; data: Hex; label: string };
 
@@ -57,7 +57,9 @@ export function jobActionCalls(chainJobId: number, a: JobAction): Call[] {
 }
 
 export function tipCalls(to: `0x${string}`, amount: number, postHash: Hex): Call[] {
-  if (!Number.isInteger(amount) || amount < MIN_TIP) throw new Error("Minimum tip is $0.50");
+  if (!Number.isInteger(amount) || amount < MIN_TIP) throw new Error("Minimum tip is $0.10");
+  // The Social contract refuses under $0.50. Smaller tips are one plain USDC transfer, straight to them; the server records it from the receipt.
+  if (amount < CONTRACT_MIN_TIP) return [{ to: USDC, label: "Send tip", data: encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, BigInt(amount)] }) }];
   return [
     { to: USDC, label: "Approve tip", data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [env.social(), BigInt(amount)] }) },
     { to: env.social(), label: "Send tip", data: encodeFunctionData({ abi: arctisanSocialAbi, functionName: "tip", args: [to, BigInt(amount), postHash] }) },

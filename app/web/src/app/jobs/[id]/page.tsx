@@ -22,7 +22,7 @@ type Job = {
 const usd = (u: number) => u / 1e6;
 const money = (u: number) => `$${usd(u).toFixed(2)}`;
 const TAG: Record<string, JobState> = { Draft: "Proposed", Proposed: "Proposed", Agreed: "Funded", Funded: "Funded", Active: "Active", Delivered: "Delivered", Settlement: "Settlement", Completed: "Completed", Settled: "Completed", Deadlocked: "Completed", Cancelled: "Completed", Abandoned: "Completed" };
-const RULE = { Split5050: "shared 50/50", ToClient: "returned to the client", ToArtisan: "paid to the artisan" } as const;
+const RULE = { Split5050: "shared equally between client and artisan", ToClient: "returned to the client", ToArtisan: "paid to the artisan" } as const;
 const when = (ts: number | null) => (ts ? new Date(ts * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 
 // Invoice: the agreed terms, a money timeline from onchain events, and only the actions the rules allow right now.
@@ -96,7 +96,7 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
 
   return (
     <main className="mx-auto min-h-dvh max-w-[560px] pb-40">
-      <TopBar back="/jobs" title={`Invoice #${j.chainJobId ?? "…"}`} right={<StateTag s={tag} />} />
+      <TopBar back="/jobs" title={`Invoice #${j.chainJobId ?? "…"}`} right={ready || done ? <StateTag s={tag} /> : <span className="inline-flex h-6 items-center rounded-full border border-line-strong px-2.5 text-[11px] font-medium">Not signed</span>} />
       <div className="px-5">
         <div className="card relative mt-2 overflow-hidden" style={{ animation: stamped ? "thud 420ms ease 330ms" : undefined }}>
           {done && <div className="absolute bottom-[34px] right-3 z-10 scale-[.82]"><PaidStamp date={stamped ? "today" : at("JobClosed")} animate={stamped} /></div>}
@@ -169,7 +169,7 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
           <p>· 3 days with no update from the Arctisan: unreleased money returns to the client.</p>
           <p>· Nothing delivered by the agreed date + 3 days: unreleased money returns to the client.</p>
           <p>· 3 days with no reply to a delivery: it moves to settlement.</p>
-          <p>· No split agreed in 48 hours: the frozen part is {RULE[j.terms.deadlockRule as keyof typeof RULE]}.</p>
+          <p>· If you disagree and cannot agree how to share the money still in escrow within 48 hours, it is {RULE[j.terms.deadlockRule as keyof typeof RULE]}. Arctisans never takes it.</p>
         </div>
         <p className="mt-5 text-[12.5px] text-muted">Terms fingerprint <span className="font-mono">{j.termsHash.slice(0, 8)}…{j.termsHash.slice(-4)}</span>{j.timeline[0] && <> · <a className="underline underline-offset-4" target="_blank" rel="noreferrer" href={`https://explorer.arc.io/tx/${j.timeline[0].tx}`}>View on Arc</a></>}</p>
       </div>
@@ -177,7 +177,12 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
       <div className="fixed bottom-0 left-[var(--rail)] right-[var(--aside)] z-40 flex justify-center bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-8">
         <div className="flex w-full max-w-[440px] flex-col gap-2">
           {err && <p className="rounded-[14px] hairline bg-[var(--bg)] px-4 py-2.5 text-[13px]">{err}</p>}
-          {!ready && !done && <p className="text-center text-[13px] text-muted">Confirming on Arc…</p>}
+          {!ready && !done && (
+            <>
+              <p className="text-center text-[13px] leading-relaxed text-muted">This agreement is written but not signed yet. {first(other)} sees nothing and no money moves until you sign it in your wallet.</p>
+              <button disabled={!!busy} onClick={() => act("propose", { action: "propose" })} className="btn btn-solid w-full">{busy === "propose" ? "Waiting for approval…" : "Sign and send to " + first(other)}</button>
+            </>
+          )}
           {ready && s === "Proposed" && (isClient
             ? <p className="text-center text-[13px] text-muted">Waiting for {first(j.artisan)} to accept the terms.</p>
             : <div className="flex gap-2"><button disabled={!!busy} onClick={() => act("cancel", { action: "cancel" })} className="btn btn-ghost">Decline</button><button disabled={!!busy} onClick={() => act("agree", { action: "agree" })} className="btn btn-solid flex-1">{busy === "agree" ? "Waiting for approval…" : "Accept terms"}</button></div>)}

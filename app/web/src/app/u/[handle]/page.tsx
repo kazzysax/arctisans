@@ -193,7 +193,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             <Stat value={<Roll value={rep.paid ?? rep.completed} />} label="Paid jobs" />
             <Stat value={<>{avg}<span className="text-[14px] text-faint">★</span></>} label="Rating" />
             <Stat value={`${rep.onTimeRate !== null ? Math.round(rep.onTimeRate * 100) : "—"}%`} label="On time" />
-            <Stat value={<Roll value={rep.earned / 1e6} prefix="$" />} label="Earned" />
+            <Stat value={<Roll value={rep.earned / 1e6} prefix="$" decimals={rep.earned % 1e6 ? 2 : 0} />} label="Earned" />
           </div>
           {earned.length > 0 && (
             <div className="flex items-center gap-2 border-t border-line px-4 py-3">
@@ -290,7 +290,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
                   <span className="num text-[10.5px] text-black/40">{p.wallet.slice(0, 6)}…{p.wallet.slice(-4)}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-6 text-[12.5px]">
-                  {[["Paid jobs", rep.paid ?? rep.completed], ["Rating", rep.ratingAvg ? `${rep.ratingAvg.toFixed(1)} ★` : null], ["On time", rep.onTimeRate !== null ? `${Math.round(rep.onTimeRate * 100)}%` : null], ["Earned", rep.earned ? `$${(rep.earned / 1e6).toLocaleString()}` : null],
+                  {[["Paid jobs", rep.paid ?? rep.completed], ["Rating", rep.ratingAvg ? `${rep.ratingAvg.toFixed(1)} ★` : null], ["On time", rep.onTimeRate !== null ? `${Math.round(rep.onTimeRate * 100)}%` : null], ["Earned", rep.earned ? `$${(rep.earned / 1e6).toLocaleString("en-US", { minimumFractionDigits: rep.earned % 1e6 ? 2 : 0, maximumFractionDigits: 2 })}` : null],
                     ["Clients", rep.uniqueClients], ["Tips", rep.tipsReceived ? `$${(rep.tipsReceived / 1e6).toFixed(2)}` : null], ["Settled", rep.settled], ["Deadlocks", rep.deadlocked]].map(([k, v]) => (
                     <div key={String(k)} className="flex justify-between border-b border-dotted border-black/15 py-1.5"><span className="text-black/50">{k}</span><span className="num">{v ? v : "—"}</span></div>
                   ))}
@@ -403,7 +403,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             <Stat value={rep.paid ?? rep.completed} label="Paid jobs" />
             <Stat value={`${avg}★`} label="Rating" />
             <Stat value={`${rep.onTimeRate !== null ? Math.round(rep.onTimeRate * 100) : "—"}%`} label="On time" />
-            <Stat value={`$${(rep.earned / 1e6).toLocaleString()}`} label="Earned" />
+            <Stat value={`$${(rep.earned / 1e6).toLocaleString("en-US", { minimumFractionDigits: rep.earned % 1e6 ? 2 : 0, maximumFractionDigits: 2 })}`} label="Earned" />
             <Stat value={rep.uniqueClients} label="Clients" />
             <Stat value={rep.deadlocked} label="Deadlocks" />
           </div>

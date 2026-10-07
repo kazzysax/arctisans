@@ -27,6 +27,7 @@ type FeedItem = {
   video?: string | null;
   skill: string | null;
   likes: number;
+  tips?: number;
   createdAt: number;
 };
 
@@ -50,7 +51,7 @@ function toPost(item: FeedItem): Post {
     caption: item.body,
     skill: item.skill ?? "",
     likes: item.likes,
-    tips: 0,
+    tips: item.tips ?? 0,
     ago: ago(item.createdAt),
   };
 }

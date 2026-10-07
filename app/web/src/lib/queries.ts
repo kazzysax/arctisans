@@ -61,7 +61,8 @@ export async function listFeed(q: FeedQuery) {
   args.push(Math.min(q.limit ?? 20, 50));
   const r = await db().execute({
     sql: `SELECT p.*, u.handle, u.display_name, u.kind, u.verified, u.avatar, u.title, u.cv,
-            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes
+            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS likes,
+            (SELECT COUNT(*) FROM tips t WHERE t.post_hash = p.hash) AS tipn
           FROM posts p JOIN users u ON u.wallet = p.author_wallet
           WHERE ${where.join(" AND ")} ORDER BY p.created_at DESC LIMIT ?`,
     args,
@@ -70,7 +71,7 @@ export async function listFeed(q: FeedQuery) {
     id: String(x.id), authorWallet: String(x.author_wallet), handle: String(x.handle), displayName: String(x.display_name),
     kind: String(x.kind), verified: !!Number(x.verified), avatar: x.avatar ? imageUrl(String(x.avatar)) : null, title: x.title ? String(x.title) : null, feed: String(x.feed), body: x.body ? String(x.body) : "",
     images: json<string[]>(x.images, []).map(imageUrl), video: x.video ? String(x.video) : null, skill: x.skill ? String(x.skill) : null, city: x.city ? String(x.city) : null,
-    budget: x.budget ? Number(x.budget) : null, likes: Number(x.likes), createdAt: Number(x.created_at), sourceUrl: x.source_url ? String(x.source_url) : null,
+    budget: x.budget ? Number(x.budget) : null, likes: Number(x.likes), tips: Number(x.tipn), createdAt: Number(x.created_at), sourceUrl: x.source_url ? String(x.source_url) : null,
   }));
 }
 

@@ -24,3 +24,6 @@ node_modules/
 .env
 .env.local
 app/contracts/broadcast/
+
+# internal notes, kept local
+docs/next/

@@ -162,7 +162,7 @@ export default function Invoice({ params }: { params: Promise<{ id: string }> })
           ))}
         </ol>
 
-        {j.chainJobId != null && <JobChat jobId={j.id} otherName={first(isClient ? j.artisan : j.client)} />}
+        <JobChat jobId={j.id} otherName={first(isClient ? j.artisan : j.client)} />
 
         <h2 className="mt-8 text-[15px] font-medium">Rules you both agreed</h2>
         <div className="mt-3 flex flex-col gap-2 text-[13px] leading-relaxed text-muted">

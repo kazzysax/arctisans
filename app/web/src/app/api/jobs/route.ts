@@ -6,6 +6,8 @@ import { requireSession } from "@/lib/session";
 import { TermsSchema, hashTerms, defaultSplit, totalOf, maxUpfront } from "@/lib/terms";
 import { artisanLevel } from "@/lib/level";
 import { proposeCalls } from "@/lib/tx";
+import { after } from "next/server";
+import { runNative, touchesNative } from "@/lib/native/worker";
 
 // Draft body: either explicit upfront/milestones, or just `total` (+ optional `upfrontBps`). Default: paid on approval.
 // Upfront is only allowed up to the artisan's onchain level (New 0%, Trusted 30%, Pro 50%); the escrow enforces it too.
@@ -48,6 +50,7 @@ export const POST = route("jobs-create", 30, async (req) => {
     sql: "INSERT INTO jobs(id,client,artisan,terms,terms_hash,skills,status,created_at) VALUES(?,?,?,?,?,?,'Draft',?)",
     args: [id, terms.client.toLowerCase(), terms.artisan.toLowerCase(), JSON.stringify(terms), hash, JSON.stringify(terms.skills.map((s) => s.toLowerCase())), Date.now()],
   });
+  if (touchesNative([terms.client, terms.artisan])) after(() => runNative().catch((e) => console.error("[native]", e))); // the agent answers right away, even before signing
   return ok({ id, hash, total: totalOf(terms), terms, calls: proposeCalls(terms) }, 201);
 });
 

@@ -222,3 +222,4 @@ textarea.field { height:auto; padding:14px 16px; line-height:1.5; resize:none; }
 /* paid celebration */
 @keyframes confetti { 0% { transform: translate3d(0,-20px,0) rotate(0); opacity: 1; } 100% { transform: translate3d(var(--dx), 105dvh, 0) rotate(var(--r)); opacity: 1; } }
 @keyframes paidIn { 0% { transform: scale(.6) rotate(-14deg); opacity: 0; } 60% { transform: scale(1.06) rotate(-4deg); opacity: 1; } 100% { transform: scale(1) rotate(-6deg); } }
+@keyframes pulse-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: .8; transform: translateY(-2px); } }

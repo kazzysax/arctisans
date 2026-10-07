@@ -156,7 +156,46 @@ async function subHire(a: Agent, helper: Agent, parent: Row, ask: string): Promi
 }
 
 /** One pass for one agent as the hired side. */
+export async function answerDrafts(a: Pick<Agent, "handle" | "price" | "wallet">) {
+  // A request that was written but not signed yet cannot be accepted (accepting is an onchain action). The agent still answers, once, so nobody waits in silence.
+  const drafts = (await db().execute({ sql: "SELECT * FROM jobs WHERE artisan=? AND chain_job_id IS NULL AND status='Draft' AND created_at>? ORDER BY created_at ASC LIMIT 10", args: [a.wallet, Date.now() - 48 * 3600_000] })).rows;
+  for (const j of drafts) {
+    try {
+      if ((await messages(String(j.id))).some((m) => lc(m.sender) === a.wallet)) continue;
+      const t = terms(j), total = totalOf(t), price = `$${(a.price / 1e6).toFixed(2)}`;
+      const text = total < a.price
+        ? `Thanks, I saw your request "${t.title}". My price is ${price}, and this one is $${(total / 1e6).toFixed(2)}. Please write it again at ${price} or more, and sign it so it reaches me.`
+        : `Thanks, I saw your request "${t.title}" and I can do it for $${(total / 1e6).toFixed(2)}. It is not signed yet, so it has not reached me and I cannot accept it. Open the job and tap "Sign and send". I'll accept within a minute after that. You can add any details here in this chat first.`;
+      await message(String(j.id), a.wallet, lc(j.client), text);
+      say(`@${a.handle} replied to unsigned request ${String(j.id).slice(0, 8)}`);
+    } catch (e) { say(`@${a.handle} draft reply failed: ${(e as Error).message.slice(0, 80)}`); }
+  }
+}
+
+/** Answers the client's newest chat message on any open job (signed or not). Text only: it can explain and answer, never move money or change a job. */
+export async function answerChats(a: Pick<Agent, "handle" | "name" | "title" | "bio" | "price" | "wallet">) {
+  const jobs = (await db().execute({ sql: "SELECT * FROM jobs WHERE artisan=? AND status NOT IN ('Completed','Settled','Cancelled','Declined','Deadlocked','Abandoned') AND created_at>? ORDER BY created_at DESC LIMIT 10", args: [a.wallet, Date.now() - 7 * 86400_000] })).rows;
+  for (const j of jobs) {
+    try {
+      const rows = (await db().execute({ sql: "SELECT sender, body FROM job_messages WHERE job_id=? ORDER BY created_at ASC LIMIT 60", args: [String(j.id)] })).rows;
+      const last = rows.at(-1);
+      if (!last || lc(last.sender) !== lc(j.client)) continue; // nothing new from the client
+      if (rows.filter((m) => lc(m.sender) === a.wallet).length >= 12) continue; // cap per job
+      const t = terms(j), signed = j.chain_job_id != null, status = String(j.status);
+      const where = !signed ? "The request is written but NOT signed by the client yet, so I cannot accept it. The client must tap 'Sign and send' on the job." : status === "Proposed" ? "I have not accepted yet or just did; after acceptance the client funds the escrow and then I start." : status === "Funded" ? "It is funded; I start now." : status === "Active" ? "I am working on it." : `Status: ${status}.`;
+      const talk = rows.slice(-14).map((m) => `${lc(m.sender) === a.wallet ? a.name : "Client"}: ${String(m.body).slice(0, 500)}`).join("\n");
+      const reply = await chat(
+        `You are ${a.name}, an AI agent on Arctisans (${a.title}). ${a.bio}\nYou reply in the job chat in at most 3 short plain sentences. No markdown, no emojis. Never promise money movement, refunds or deadlines you cannot control; never claim you did something you did not. If asked something outside this job, say so briefly. Facts: price is $${(a.price / 1e6).toFixed(2)}; this job is "${t.title}" at $${(totalOf(t) / 1e6).toFixed(2)}. ${where}`,
+        talk, 220);
+      await message(String(j.id), a.wallet, lc(j.client), reply.slice(0, 900));
+      say(`@${a.handle} answered chat on ${String(j.id).slice(0, 8)}`);
+    } catch (e) { say(`@${a.handle} chat reply failed: ${(e as Error).message.slice(0, 80)}`); }
+  }
+}
+
 async function serve(a: Agent, all: Agent[]) {
+  await answerDrafts(a);
+  await answerChats(a);
   const jobs = (await db().execute({ sql: "SELECT * FROM jobs WHERE artisan=? AND chain_job_id IS NOT NULL AND status IN ('Proposed','Funded','Active') ORDER BY created_at ASC LIMIT 20", args: [a.wallet] })).rows;
   for (const j of jobs) {
     try {

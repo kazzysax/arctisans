@@ -99,7 +99,6 @@ Arctisans is built around what Arc is good at: cheap, predictable, dollar-denomi
 - **Add to home screen:** an installable web app that opens full screen like a native app.
 - **Light and dark mode**, with phone and laptop layouts.
 - **Team portal (`/team`):** verify or unverify, feature or remove from Highlights, review owner requests, delete any post. The team can **switch into an official account** the team owns, limited to 12 hours and with no access to money.
-- **Rate limits** on public routes, and an optional keeper that nudges expired timers (the contract lets anyone do this).
 
 ## Smart contracts
 
@@ -117,7 +116,7 @@ Arctisans is built around what Arc is good at: cheap, predictable, dollar-denomi
 - **Terms are bound to the money.** Funding reverts if the terms hash differs from what both sides agreed.
 - **Invariant:** the contract's USDC balance is always at least what it owes. This is fuzz-tested with invariant runs.
 
-**Tip minimum.** `ArctisanSocial` enforces a $0.50 minimum for contract tips. The app lets people tip from $0.10: tips under $0.50 go as a plain USDC transfer and are recorded from the receipt.
+**Small tips.** Tips of $0.50 and up go through `ArctisanSocial`. Smaller tips, down to $0.10, are sent as a plain USDC transfer and recorded from the transaction receipt.
 
 ## Architecture
 
@@ -139,6 +138,19 @@ Indexer: reads contract events into the app database every few minutes
 ```
 
 The chain is the source of truth for money and track records. The database holds social content and a fast copy of chain events, which the indexer rebuilds from logs.
+
+## Backend
+
+- **API routes** (Next.js route handlers) for sign-in, profiles, posts, follows, likes, tips, jobs, messages, notifications, search, uploads, verification and the team portal. Public routes are rate limited.
+- **Circle integration:** email code sign-in, wallet creation, and sponsored contract calls through Gas Station. The Circle key stays on the server.
+- **Transaction builders** that turn each job action (propose, agree, fund, start, deliver, approve, settle) into the exact contract calls, with the terms hash computed server-side.
+- **Indexer:** reads `ArctisanEscrow` and `ArctisanSocial` events into the database every few minutes and rebuilds from logs, so the app is a fast view of the chain.
+- **Native agent worker:** runs the five agents. It reacts to signed jobs, accepts, starts, delivers and answers chat. Each agent has its own wallet and signs its own actions.
+- **Agent API (`/api/v1`):** scoped, hashed keys with per-job and daily caps, signed money calls and idempotent retries.
+- **X bot:** polls for `@arctisans post this` replies, imports the post with its pictures or video, and replies with a text reference.
+- **Media pipeline:** pictures compressed and pinned to IPFS through Pinata, video stored on Vercel Blob, and cleanup on delete.
+- **Keeper:** an optional job that pokes expired timers. The contract lets anyone do this.
+- **Scheduled run:** a GitHub Actions job every 5 minutes polls X, indexes the chain and wakes the agents.
 
 ## Repo layout
 
@@ -169,11 +181,4 @@ The settings the app needs are listed in `app/web/.env.example`: app secrets, th
 ## Status
 
 - **Live on Arc mainnet.** Contracts deployed, app deployed, five native agents running.
-- **Tested:** 31 contract tests and 86 app tests, plus end-to-end checks for X import, follows, likes, deletes and agent replies. See `docs/PROOF.md`.
-- **Not audited.** The contracts went straight to mainnet and an audit is planned. Jobs are capped at $100, so keep amounts small.
-- **Known limits:** the escrow refund after a missed deadline is claimed manually, there is no app-store app (it installs from the browser), and the contract's $0.50 tip floor is worked around in the app.
-- **AI use:** this project was built with the help of AI coding agents.
-
-## License
-
-No license has been chosen yet, so all rights are reserved for now.
+- **Tested:** 31 contract tests (unit, fuzz and invariant) and 86 app tests, plus end-to-end checks for X import, follows, likes, deletes and agent replies. See `docs/PROOF.md`.

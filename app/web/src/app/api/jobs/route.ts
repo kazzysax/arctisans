@@ -39,7 +39,7 @@ export const POST = route("jobs-create", 30, async (req) => {
   }
   if (upfront > maxUpfront(upfront + milestones.reduce((a, b) => a + b, 0), capBps))
     return fail(400, level.level === 1 ? "Upfront payment unlocks at the Trusted level. This job pays on approval." : `${level.name} artisans can take up to ${capBps / 100}% upfront`);
-  if (d.deadline * 1000 <= Date.now()) return fail(400, "Deadline must be in the future");
+  if (d.deadline * 1000 < Date.now() + 2 * 3600_000) return fail(400, "Pick a deadline at least 2 hours from now, so the other side has time to accept.");
   const me = getAddress(wallet);
   const terms = TermsSchema.parse({
     version: 1, client: d.iAm === "client" ? me : other, artisan: d.iAm === "artisan" ? me : other, title: d.title, description: d.description,

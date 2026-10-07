@@ -182,7 +182,7 @@ export async function answerChats(a: Pick<Agent, "handle" | "name" | "title" | "
       if (!last || lc(last.sender) !== lc(j.client)) continue; // nothing new from the client
       if (rows.filter((m) => lc(m.sender) === a.wallet).length >= 12) continue; // cap per job
       const t = terms(j), signed = j.chain_job_id != null, status = String(j.status);
-      const where = !signed ? "The request is written but NOT signed by the client yet, so I cannot accept it. The client must tap 'Sign and send' on the job." : status === "Proposed" ? "I have not accepted yet or just did; after acceptance the client funds the escrow and then I start." : status === "Funded" ? "It is funded; I start now." : status === "Active" ? "I am working on it." : `Status: ${status}.`;
+      const where = !signed ? "The request is written but NOT signed by the client yet, so I cannot accept it. The client must tap 'Sign and send' on the job." : status === "Proposed" ? (t.deadline * 1000 < Date.now() + 3600_000 ? "The job IS signed, but its deadline is less than an hour away, so I did not accept it. Tell the client to send it again with a deadline at least a day away. Do NOT say it is unsigned." : "The job is signed. I have not accepted yet or just did; after acceptance the client funds the escrow and then I start. Do NOT say it is unsigned.") : status === "Funded" ? "It is funded; I start now." : status === "Active" ? "I am working on it." : `Status: ${status}.`;
       const talk = rows.slice(-14).map((m) => `${lc(m.sender) === a.wallet ? a.name : "Client"}: ${String(m.body).slice(0, 500)}`).join("\n");
       const reply = await chat(
         `You are ${a.name}, an AI agent on Arctisans (${a.title}). ${a.bio}\nYou reply in the job chat in at most 3 short plain sentences. No markdown, no emojis. Never promise money movement, refunds or deadlines you cannot control; never claim you did something you did not. If asked something outside this job, say so briefly. Facts: price is $${(a.price / 1e6).toFixed(2)}; this job is "${t.title}" at $${(totalOf(t) / 1e6).toFixed(2)}. ${where}`,
@@ -204,7 +204,11 @@ async function serve(a: Agent, all: Agent[]) {
         const done = (await db().execute({ sql: "SELECT 1 FROM chain_events WHERE name='TermsAgreed' AND args LIKE ?", args: [`%"jobId":"${cid}"%`] })).rows.length;
         if (done) continue;
         if (totalOf(t) < a.price) { await message(String(j.id), a.wallet, lc(j.client), `My price is $${(a.price / 1e6).toFixed(2)}. Please propose again at that amount.`); await db().execute({ sql: "UPDATE jobs SET status='Declined' WHERE id=?", args: [j.id] }); continue; }
-        if (t.deadline * 1000 < Date.now() + 3600_000) continue;
+        if (t.deadline * 1000 < Date.now() + 3600_000) {
+          const said = (await messages(String(j.id))).some((m) => lc(m.sender) === a.wallet && String(m.body).startsWith("The deadline"));
+          if (!said) await message(String(j.id), a.wallet, lc(j.client), "The deadline on this job is too close for me to take it safely, so I have not accepted. Please send it again with a deadline at least a day away. Nothing was charged.");
+          continue;
+        }
         await act(a, j, { action: "agree" });
         if (!all.some((x) => x.wallet === lc(j.client))) await message(String(j.id), a.wallet, lc(j.client), `Accepted. Fund the job and I'll start right away. Add any details here in the chat before funding.`);
       } else if (status === "Funded") {

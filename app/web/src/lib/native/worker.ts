@@ -83,7 +83,7 @@ async function message(jobId: string, from: string, to: string, body: string) {
   await db().execute({ sql: "INSERT INTO notifications(id,wallet,kind,data,created_at) VALUES(?,?,?,?,?)", args: [crypto.randomUUID(), to, "job_message", JSON.stringify({ jobId }), now] });
 }
 async function messages(jobId: string) {
-  return (await db().execute({ sql: "SELECT sender, body FROM job_messages WHERE job_id=? ORDER BY created_at ASC LIMIT 100", args: [jobId] })).rows;
+  return (await db().execute({ sql: "SELECT sender, body, created_at FROM job_messages WHERE job_id=? ORDER BY created_at ASC LIMIT 100", args: [jobId] })).rows;
 }
 const terms = (j: Row): Terms => TermsSchema.parse(JSON.parse(String(j.terms)));
 
@@ -91,7 +91,7 @@ const terms = (j: Row): Terms => TermsSchema.parse(JSON.parse(String(j.terms)));
 async function request(j: Row) {
   const t = terms(j);
   const chatLines = (await messages(String(j.id))).filter((m) => lc(m.sender) === lc(j.client)).map((m) => `- ${m.body}`);
-  return [`Title: ${t.title}`, t.description && `Details: ${t.description}`, `Deliverables: ${t.deliverables.join("; ")}`, `Done means: ${t.doneMeans}`, chatLines.length ? `Client messages:\n${chatLines.join("\n")}` : ""].filter(Boolean).join("\n");
+  return [`Title: ${t.title}`, t.description && `Details: ${t.description}`, `Deliverables: ${t.deliverables.join("; ")}`, `Done means: ${t.doneMeans}`, chatLines.length ? `Client messages (these OVERRIDE the saved profile where they differ):\n${chatLines.join("\n")}` : "The client sent no extra details in the chat. Start your reply with one line beginning \"Assumptions:\" saying what you assumed."].filter(Boolean).join("\n");
 }
 
 async function makeImage(a: Agent, prompt: string) {
@@ -121,10 +121,10 @@ async function doWork(a: Agent, j: Row, all: Agent[]): Promise<string | null> {
   if (a.handle === "cvdoctor") {
     const me = (await db().execute({ sql: "SELECT display_name, title, bio, skills, cv FROM users WHERE wallet=?", args: [lc(j.client)] })).rows[0];
     const profile = me ? `Current profile: name ${me.display_name}; title ${me.title ?? "(none)"}; bio ${me.bio ?? "(none)"}; skills ${me.skills}; cv ${me.cv}` : "No profile found.";
-    const text = await chat(a.system, `${profile}\n\n${req}`);
+    const text = await chat(a.system, `${profile}\n\n${req}`, 1200);
     return extra ? `${text}\n\nProfile picture (made by @portrait for this job):\n${extra}` : text;
   }
-  const text = await chat(a.system, req);
+  const text = await chat(a.system, req, 1000);
   return extra ? `${text}\n\nReady-to-post request (written by @wordsmith for this job):\n${extra}` : text;
 }
 
@@ -182,15 +182,33 @@ export async function answerChats(a: Pick<Agent, "handle" | "name" | "title" | "
       if (!last || lc(last.sender) !== lc(j.client)) continue; // nothing new from the client
       if (rows.filter((m) => lc(m.sender) === a.wallet).length >= 12) continue; // cap per job
       const t = terms(j), signed = j.chain_job_id != null, status = String(j.status);
-      const where = !signed ? "The request is written but NOT signed by the client yet, so I cannot accept it. The client must tap 'Sign and send' on the job." : status === "Proposed" ? (t.deadline * 1000 < Date.now() + 3600_000 ? "The job IS signed, but its deadline is less than an hour away, so I did not accept it. Tell the client to send it again with a deadline at least a day away. Do NOT say it is unsigned." : "The job is signed. I have not accepted yet or just did; after acceptance the client funds the escrow and then I start. Do NOT say it is unsigned.") : status === "Funded" ? "It is funded; I start now." : status === "Active" ? "I am working on it." : `Status: ${status}.`;
-      const talk = rows.slice(-14).map((m) => `${lc(m.sender) === a.wallet ? a.name : "Client"}: ${String(m.body).slice(0, 500)}`).join("\n");
+      const where = !signed ? "The request is written but NOT signed by the client yet, so I cannot accept it. The client must tap 'Sign and send' on the job." : status === "Proposed" ? (t.deadline * 1000 < Date.now() + 3600_000 ? "The job IS signed, but its deadline is less than an hour away, so I did not accept it. Tell the client to send it again with a deadline at least a day away. Do NOT say it is unsigned." : "The job is signed. I have not accepted yet or just did; after acceptance the client funds the escrow and then I start. Do NOT say it is unsigned.") : status === "Funded" ? "It is funded. I start once the client has answered my questions, or 10 minutes after funding. Nothing has been delivered yet." : status === "Active" ? "I am working on it. NOTHING has been delivered yet, so never say the work is done, ready or crafted; say I will post it in this chat." : status === "Delivered" ? "I already posted the delivery in this chat (it starts with \"Delivery:\"). The client can approve it or ask for a revision. Discuss only what is in it." : `Status: ${status}.`;
+      const talk = rows.slice(-14).map((m) => `${lc(m.sender) === a.wallet ? a.name : "Client"}: ${String(m.body).slice(0, String(m.body).startsWith("Delivery:") ? 1500 : 500)}`).join("\n");
       const reply = await chat(
-        `You are ${a.name}, an AI agent on Arctisans (${a.title}). ${a.bio}\nYou reply in the job chat in at most 3 short plain sentences. No markdown, no emojis. Never promise money movement, refunds or deadlines you cannot control; never claim you did something you did not. If asked something outside this job, say so briefly. Facts: price is $${(a.price / 1e6).toFixed(2)}; this job is "${t.title}" at $${(totalOf(t) / 1e6).toFixed(2)}. ${where}`,
+        `You are ${a.name}, an AI agent on Arctisans (${a.title}). ${a.bio}\nYou reply in the job chat in at most 3 short plain sentences. No markdown, no emojis. Never promise money movement, refunds or deadlines you cannot control; never claim you did something you did not. You may only say work is finished, done, ready or crafted if the status below says Delivered or later AND a Delivery message exists in the conversation. Answer the client's actual question first, using what they wrote in this chat; ask one short question if you need something. If asked something outside this job, say so briefly. Facts: price is $${(a.price / 1e6).toFixed(2)}; this job is "${t.title}" at $${(totalOf(t) / 1e6).toFixed(2)}. ${where}`,
         talk, 220);
       await message(String(j.id), a.wallet, lc(j.client), reply.slice(0, 900));
       say(`@${a.handle} answered chat on ${String(j.id).slice(0, 8)}`);
     } catch (e) { say(`@${a.handle} chat reply failed: ${(e as Error).message.slice(0, 80)}`); }
   }
+}
+
+const QUESTIONS: Record<string, string> = {
+  cvdoctor: "1. What work do you do today, and what do you want to be hired for?\n2. Who are your ideal clients?\n3. Name one or two things you have made that you are proud of.\n4. Any tone you want (formal, friendly, bold)?",
+  portrait: "1. Who or what is the picture of (you, a brand, a character)?\n2. What style (realistic, illustrated, minimal)?\n3. Any colours or things to include or avoid?",
+  brief: "1. What do you want made, in one sentence?\n2. Who is it for and what must it achieve?\n3. What is your budget and by when do you need it?",
+  wordsmith: "1. What is the text for (post, bio, caption, translation)?\n2. Paste the original text or the idea.\n3. Tone and language, and any length limit?",
+  checker: "1. Paste what was agreed (the deliverables).\n2. Paste what you received.\n3. What worries you about it?",
+};
+/** Ask for the specification once, in words that fit this job. */
+async function specQuestions(a: Agent, j: Row): Promise<string> {
+  const t = terms(j);
+  try {
+    const q = await chat(`You are ${a.name} on Arctisans (${a.title}). Before starting a paid job you need the client to tell you exactly what they want. Write 3 or 4 short, specific questions as a numbered list (1. 2. 3.), plain text, no preamble, no markdown. Do not ask for anything the job already says. Ask what you truly need to do ${a.title.toLowerCase()} work well.`,
+      `Job: ${t.title}\nDescription: ${t.description ?? ""}\nDeliverables: ${t.deliverables.join("; ")}\nDone means: ${t.doneMeans}`, 260);
+    if (/^\s*1[.)]/.test(q)) return q;
+  } catch { /* fall back */ }
+  return QUESTIONS[a.handle] ?? "1. What exactly do you want?\n2. Who is it for?\n3. Any must-haves?";
 }
 
 async function serve(a: Agent, all: Agent[]) {
@@ -210,8 +228,14 @@ async function serve(a: Agent, all: Agent[]) {
           continue;
         }
         await act(a, j, { action: "agree" });
-        if (!all.some((x) => x.wallet === lc(j.client))) await message(String(j.id), a.wallet, lc(j.client), `Accepted. Fund the job and I'll start right away. Add any details here in the chat before funding.`);
+        if (!all.some((x) => x.wallet === lc(j.client))) await message(String(j.id), a.wallet, lc(j.client), `Accepted. So I get this right, please answer these here in the chat:\n${await specQuestions(a, j)}\n\nThen fund the job and I'll start. If I hear nothing for 10 minutes after you fund, I'll start anyway and tell you what I assumed.`);
       } else if (status === "Funded") {
+        const msgs = await messages(String(j.id));
+        const qi = msgs.map((m) => lc(m.sender) === a.wallet && String(m.body).startsWith("Accepted.")).lastIndexOf(true);
+        if (qi >= 0 && !all.some((x) => x.wallet === lc(j.client))) {
+          const answered = msgs.slice(qi + 1).some((m) => lc(m.sender) === lc(j.client));
+          if (!answered && Date.now() - Number(msgs[qi].created_at) < 10 * 60_000) continue; // wait for the specification (cron runs every 5 min)
+        }
         await act(a, j, { action: "start" });
       } else if (status === "Active") {
         const delivered = (await messages(String(j.id))).some((m) => lc(m.sender) === a.wallet && String(m.body).startsWith("Delivery:"));

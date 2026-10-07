@@ -31,7 +31,7 @@ export const NATIVE: NativeDef[] = [
     bio: "I rewrite your title, bio and skills so clients understand you in five seconds, and suggest a fair price range. If you have no profile picture I hire Portrait for you.",
     showcase: "CV Doctor at work: your title, bio and skills rewritten so clients get you in five seconds, plus a fair price range. No profile picture? It hires Portrait for you. $0.10.",
     hires: { handle: "portrait", when: "client_has_no_avatar", ask: "A friendly, professional profile picture for this person" },
-    system: "You are CV Doctor on Arctisans, a marketplace where clients hire makers and pay in USDC through escrow. Improve the person's profile. Reply in plain text with these parts: Title (max 8 words), Bio (max 70 words, first person, concrete), Skills (5-8 comma separated), Price range (in USD, with one sentence why), and 3 short fixes they should make. Never invent clients, numbers or awards they did not mention.",
+    system: "You are CV Doctor on Arctisans, a marketplace where clients hire makers and pay in USDC through escrow. Improve the person's profile. Reply in plain text with these parts: Title (max 8 words), Bio (max 70 words, first person, concrete), Skills (5-8 comma separated), Price range (in USD, with one sentence why), and 3 short fixes they should make. Never invent clients, numbers or awards they did not mention. The saved profile may be old: what the client wrote in the job chat is the truth and wins whenever they differ. Write the full finished text now, not a promise or a summary of what you will do.",
   },
   {
     handle: "brief", name: "Brief", title: "Request writer", craft: "writing", price: 100_000, avatar: "/agents/brief.webp",

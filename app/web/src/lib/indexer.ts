@@ -101,19 +101,23 @@ export async function catchUp(maxBlocks = 5000n, budgetMs = 40_000) {
   const from0 = start, t0 = Date.now();
   let events = 0, last = start - 1n;
   // The node only serves ~5000 blocks per log request, so walk forward in chunks until we reach the head or run out of time.
+  let stopped: string | null = null;
   while (start <= head && Date.now() - t0 < budgetMs) {
     const to = start + maxBlocks < head ? start + maxBlocks : head;
-    for (const [which, address] of [["escrow", env.escrow()], ["social", env.social()]] as const) {
-      const logs = await c.getLogs({ address, fromBlock: start, toBlock: to });
-      for (const log of logs) {
-        const ev = decode(which, log);
-        if (!ev) continue;
-        const blk = await c.getBlock({ blockNumber: log.blockNumber! });
-        if (await applyEvent(which, ev, { block: Number(log.blockNumber), tx: log.transactionHash!, logIndex: log.logIndex ?? 0, ts: Number(blk.timestamp) })) events++;
+    try {
+      for (const [which, address] of [["escrow", env.escrow()], ["social", env.social()]] as const) {
+        const logs = await c.getLogs({ address, fromBlock: start, toBlock: to });
+        for (const log of logs) {
+          const ev = decode(which, log);
+          if (!ev) continue;
+          const blk = await c.getBlock({ blockNumber: log.blockNumber! });
+          if (await applyEvent(which, ev, { block: Number(log.blockNumber), tx: log.transactionHash!, logIndex: log.logIndex ?? 0, ts: Number(blk.timestamp) })) events++;
+        }
       }
-    }
+    } catch (e) { stopped = (e as Error).message.split("\n")[0].slice(0, 120); break; } // the node's rate limit: keep what we have, continue next run
+    await new Promise((r) => setTimeout(r, 250));
     last = to; start = to + 1n;
     await db().execute({ sql: "INSERT INTO chain_state(k,v) VALUES('last_block',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", args: [to.toString()] });
   }
-  return { from: Number(from0), to: Number(last), events, behind: Number(head - last) };
+  return { from: Number(from0), to: Number(last), events, behind: Number(head - last), stopped };
 }

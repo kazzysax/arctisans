@@ -30,11 +30,11 @@ describe("transaction builders", () => {
     expect(d.args?.[2]).toBe(hashTerms(t));
     expect(d.args?.[3]).toBe(10_000_000n);
   });
-  it("tip approves exact amount to the social contract and enforces $0.50 min", () => {
+  it("tip approves exact amount to the social contract and enforces $0.10 min", () => {
     const [ap, tip] = tipCalls(A, 2_000_000, "0x" + "11".repeat(32) as `0x${string}`);
     expect((decodeFunctionData({ abi: erc20Abi, data: ap.data }).args as readonly unknown[])[1]).toBe(2_000_000n);
     expect(decodeFunctionData({ abi: arctisanSocialAbi, data: tip.data }).functionName).toBe("tip");
-    expect(() => tipCalls(A, 499_999, "0x" + "11".repeat(32) as `0x${string}`)).toThrow();
+    expect(() => tipCalls(A, 99_999, "0x" + "11".repeat(32) as `0x${string}`)).toThrow();
   });
   it("job actions encode the right function", () => {
     for (const a of ["start", "cancel", "approveDelivery", "openSettlement", "poke"] as const) {

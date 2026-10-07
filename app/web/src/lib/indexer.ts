@@ -92,24 +92,28 @@ export async function indexTx(hash: `0x${string}`) {
 }
 
 /** Catch-up poller: scans new blocks in chunks from the last saved block. */
-export async function catchUp(maxBlocks = 5000n) {
+export async function catchUp(maxBlocks = 5000n, budgetMs = 40_000) {
   await migrate();
   const c = client();
   const head = await c.getBlockNumber();
   const row = await db().execute("SELECT v FROM chain_state WHERE k='last_block'");
-  const start = row.rows[0] ? BigInt(String(row.rows[0].v)) + 1n : BigInt(process.env.START_BLOCK ?? head);
-  if (start > head) return { from: Number(start), to: Number(head), events: 0 };
-  const to = start + maxBlocks < head ? start + maxBlocks : head;
-  let events = 0;
-  for (const [which, address] of [["escrow", env.escrow()], ["social", env.social()]] as const) {
-    const logs = await c.getLogs({ address, fromBlock: start, toBlock: to });
-    for (const log of logs) {
-      const ev = decode(which, log);
-      if (!ev) continue;
-      const blk = await c.getBlock({ blockNumber: log.blockNumber! });
-      if (await applyEvent(which, ev, { block: Number(log.blockNumber), tx: log.transactionHash!, logIndex: log.logIndex ?? 0, ts: Number(blk.timestamp) })) events++;
+  let start = row.rows[0] ? BigInt(String(row.rows[0].v)) + 1n : BigInt(process.env.START_BLOCK ?? head);
+  const from0 = start, t0 = Date.now();
+  let events = 0, last = start - 1n;
+  // The node only serves ~5000 blocks per log request, so walk forward in chunks until we reach the head or run out of time.
+  while (start <= head && Date.now() - t0 < budgetMs) {
+    const to = start + maxBlocks < head ? start + maxBlocks : head;
+    for (const [which, address] of [["escrow", env.escrow()], ["social", env.social()]] as const) {
+      const logs = await c.getLogs({ address, fromBlock: start, toBlock: to });
+      for (const log of logs) {
+        const ev = decode(which, log);
+        if (!ev) continue;
+        const blk = await c.getBlock({ blockNumber: log.blockNumber! });
+        if (await applyEvent(which, ev, { block: Number(log.blockNumber), tx: log.transactionHash!, logIndex: log.logIndex ?? 0, ts: Number(blk.timestamp) })) events++;
+      }
     }
+    last = to; start = to + 1n;
+    await db().execute({ sql: "INSERT INTO chain_state(k,v) VALUES('last_block',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", args: [to.toString()] });
   }
-  await db().execute({ sql: "INSERT INTO chain_state(k,v) VALUES('last_block',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", args: [to.toString()] });
-  return { from: Number(start), to: Number(to), events };
+  return { from: Number(from0), to: Number(last), events, behind: Number(head - last) };
 }

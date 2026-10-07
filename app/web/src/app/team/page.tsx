@@ -1,4 +1,5 @@
 "use client";
+import { LeafLoader } from "@/components/Logo";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/ui";
@@ -50,7 +51,7 @@ export default function Team() {
     <button onClick={onClick} className={`press rounded-full px-4 py-2 text-[13px] font-medium ${solid ? "bg-fg text-[var(--bg)]" : "hairline-strong"}`}>{children}</button>
   );
 
-  if (state === "load") return <main className="grid min-h-dvh place-items-center text-[13px] text-faint">Loading…</main>;
+  if (state === "load") return <main className="grid min-h-dvh place-items-center text-fg"><LeafLoader size={64} /></main>;
   if (state === "no") return <main className="mx-auto max-w-[520px]"><TopBar back="/settings" title="Team" /><p className="px-5 pt-10 text-center text-[14px] text-muted">This page is for the Arctisans team only.</p></main>;
   return (
     <main className="mx-auto min-h-dvh max-w-[520px] pb-16">

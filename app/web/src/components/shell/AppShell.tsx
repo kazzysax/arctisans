@@ -1,4 +1,5 @@
 "use client";
+import { LeafLoader } from "@/components/Logo";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { TabBar } from "../TabBar";
@@ -35,7 +36,7 @@ export function AppShell({ children, aside }: { children: React.ReactNode; aside
   }
 
   // Still loading auth → render nothing to avoid flash of wrong screen
-  if (auth.status === "loading") return null;
+  if (auth.status === "loading") return <div className="grid min-h-dvh place-items-center text-fg" aria-busy><LeafLoader size={72} /></div>;
   if (auth.status === "out" || auth.status === "new") return null;
 
   const a = hasAside(p);

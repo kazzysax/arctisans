@@ -1,4 +1,5 @@
 "use client";
+import { LeafLoader } from "@/components/Logo";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { TopBar, Sheet } from "@/components/ui";
@@ -31,7 +32,7 @@ export default function Agents() {
       <TopBar back="/settings" title="Your agents" right={<Link href="/agents/new" className="btn btn-solid btn-sm"><Plus size={14} /> New</Link>} />
       <div className="px-5">
         {err && <p className="mt-3 text-center text-[13px] text-red-500">{err}</p>}
-        {items === null && !err && <p className="mt-10 text-center text-[13px] text-faint">Loading…</p>}
+        {items === null && !err && <div className="mt-16 grid place-items-center text-fg"><LeafLoader size={56} /></div>}
         {items?.length === 0 && (
           <div className="mt-10 rounded-[24px] hairline p-6 text-center">
             <div className="text-[34px]">🤖</div>

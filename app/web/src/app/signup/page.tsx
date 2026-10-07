@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mark } from "@/components/Logo";
+import { Mark, LeafLoader } from "@/components/Logo";
 import { circleReady, signInWithEmail, finishLogin, googleReady, startGoogleSignIn, googlePending, resumeGoogleLogin } from "@/lib/walletClient";
 
 // Sign-up: full-bleed dewy macro photo tinted light blue, a solid square block with spaced serif capitals (reference),
@@ -119,7 +119,7 @@ export default function SignUp() {
             <h1 className="text-[28px] font-semibold tracking-[-0.035em]">Check your inbox</h1>
             <p className="mt-2 text-[14px] leading-relaxed text-white/60">We sent a 6-digit code to <span className="text-white">{email}</span>. Enter it in the secure window that just opened.</p>
             {error && <p className="mt-3 rounded-xl bg-red-900/60 px-4 py-2.5 text-[13px] text-red-200">{error}</p>}
-            <div className="mt-8 flex items-center gap-3 text-[13px] text-white/55"><span className="h-4 w-4 rounded-full border-2 border-white/50 border-t-transparent" style={{ animation: "spin .8s linear infinite" }} />Waiting for you…</div>
+            <div className="mt-8 flex items-center gap-3 text-[13px] text-white/55"><LeafLoader size={22} />Waiting for you…</div>
             <p className="mt-6 text-[12px] leading-relaxed text-white/40">First time here? You&apos;ll also approve creating your wallet. There&apos;s no seed phrase to keep, and sending money costs you no network fees.</p>
           </div>
         )}

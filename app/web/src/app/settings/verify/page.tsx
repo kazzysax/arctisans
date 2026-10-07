@@ -1,4 +1,5 @@
 "use client";
+import { LeafLoader } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/ui";
@@ -62,7 +63,7 @@ export default function Verify() {
           </div>
         )}
         {err && <p className="mt-4 text-center text-[13px] text-red-500">{err}</p>}
-        {!s && !err && <p className="mt-8 text-center text-[13px] text-faint">Loading…</p>}
+        {!s && !err && <div className="mt-16 grid place-items-center text-fg"><LeafLoader size={56} /></div>}
       </div>
     </main>
   );

@@ -54,7 +54,7 @@ type Profile = {
 };
 
 type Level = { level: 1 | 2 | 3; name: string; upfrontPct: number };
-type Reputation = { completed: number; earned: number; onTimeRate: number | null; uniqueClients: number; tipsReceived: number; settled: number; deadlocked: number; ratingAvg: number | null; ratingCount: number; jobsAsArtisan: number };
+type Reputation = { completed: number; paid?: number; earned: number; onTimeRate: number | null; uniqueClients: number; tipsReceived: number; settled: number; deadlocked: number; ratingAvg: number | null; ratingCount: number; jobsAsArtisan: number };
 type ApiCard = { profile: Profile; reputation: Reputation; level: Level; badges: Badge[]; humanRating?: number | null; humanRaters?: number };
 
 type Review = { id: string; jobId: number | null; reviewer: string; reviewerName?: string; reviewerAvatar?: string; rating: number; text: string; createdAt: number };
@@ -190,7 +190,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             <span className="flex items-center gap-1.5 text-[12px]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--img-bg)] ring-1 ring-line-strong" />{level.name}{level.upfrontPct > 0 && <span className="text-faint">· {level.upfrontPct}% upfront</span>}</span>
           </div>
           <div className="grid grid-cols-4 gap-2 p-4">
-            <Stat value={<Roll value={rep.completed} />} label="Paid jobs" />
+            <Stat value={<Roll value={rep.paid ?? rep.completed} />} label="Paid jobs" />
             <Stat value={<>{avg}<span className="text-[14px] text-faint">★</span></>} label="Rating" />
             <Stat value={`${rep.onTimeRate !== null ? Math.round(rep.onTimeRate * 100) : "—"}%`} label="On time" />
             <Stat value={<Roll value={rep.earned / 1e6} prefix="$" />} label="Earned" />
@@ -290,7 +290,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
                   <span className="num text-[10.5px] text-black/40">{p.wallet.slice(0, 6)}…{p.wallet.slice(-4)}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-x-6 text-[12.5px]">
-                  {[["Paid jobs", rep.completed], ["Rating", rep.ratingAvg ? `${rep.ratingAvg.toFixed(1)} ★` : null], ["On time", rep.onTimeRate !== null ? `${Math.round(rep.onTimeRate * 100)}%` : null], ["Earned", rep.earned ? `$${(rep.earned / 1e6).toLocaleString()}` : null],
+                  {[["Paid jobs", rep.paid ?? rep.completed], ["Rating", rep.ratingAvg ? `${rep.ratingAvg.toFixed(1)} ★` : null], ["On time", rep.onTimeRate !== null ? `${Math.round(rep.onTimeRate * 100)}%` : null], ["Earned", rep.earned ? `$${(rep.earned / 1e6).toLocaleString()}` : null],
                     ["Clients", rep.uniqueClients], ["Tips", rep.tipsReceived ? `$${(rep.tipsReceived / 1e6).toFixed(2)}` : null], ["Settled", rep.settled], ["Deadlocks", rep.deadlocked]].map(([k, v]) => (
                     <div key={String(k)} className="flex justify-between border-b border-dotted border-black/15 py-1.5"><span className="text-black/50">{k}</span><span className="num">{v ? v : "—"}</span></div>
                   ))}
@@ -400,7 +400,7 @@ export default function ProfilePage({ params }: { params: Promise<{ handle: stri
             </div>
           </div>
           <div className="grid grid-cols-3 gap-y-4 bg-bg-2 p-5">
-            <Stat value={rep.completed} label="Paid jobs" />
+            <Stat value={rep.paid ?? rep.completed} label="Paid jobs" />
             <Stat value={`${avg}★`} label="Rating" />
             <Stat value={`${rep.onTimeRate !== null ? Math.round(rep.onTimeRate * 100) : "—"}%`} label="On time" />
             <Stat value={`$${(rep.earned / 1e6).toLocaleString()}`} label="Earned" />

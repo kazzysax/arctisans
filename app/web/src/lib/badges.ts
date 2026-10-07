@@ -29,7 +29,7 @@ export function computeBadges(f: BadgeFacts): Badge[] {
   const b = (id: BadgeId, name: string, how: string, progress: number, goal: number): Badge =>
     ({ id, name, how, progress: Math.min(progress, goal), goal, earned: progress >= goal });
   return [
-    b("first-job", "First job", "Complete your first paid job", r.completed, 1),
+    b("first-job", "First job", "Complete your first paid job", Math.max(r.completed, r.paid), 1),
     b("verified", "Verified", "Prove you own your GitHub or X", f.verified ? 1 : 0, 1),
     b("on-time-10", "On time ×10", "Deliver 10 jobs before the deadline", f.onTimeCount, 10),
     b("five-star-streak", "5★ streak", "Five 5-star reviews in a row", streak(f.ratingsInOrder), 5),

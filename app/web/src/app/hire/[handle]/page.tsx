@@ -26,7 +26,7 @@ export default function Hire({ params }: { params: Promise<{ handle: string }> }
   useEffect(() => {
     let live = true;
     fetch(`/api/u/${encodeURIComponent(handle)}`).then((x) => (x.ok ? x.json() : Promise.reject()))
-      .then((d) => { if (live) setP({ wallet: d.profile.wallet, name: d.profile.displayName, avatar: d.profile.avatar ?? "/demo/av_5.jpg", title: d.profile.title ?? "", jobs: d.reputation?.completed ?? 0, rating: d.reputation?.ratingAvg ? Number(d.reputation.ratingAvg).toFixed(1) : "–", level: d.level }); })
+      .then((d) => { if (live) setP({ wallet: d.profile.wallet, name: d.profile.displayName, avatar: d.profile.avatar ?? "/demo/av_5.jpg", title: d.profile.title ?? "", jobs: d.reputation?.paid ?? d.reputation?.completed ?? 0, rating: d.reputation?.ratingAvg ? Number(d.reputation.ratingAvg).toFixed(1) : "–", level: d.level }); })
       .catch(() => live && setMissing(true));
     return () => { live = false; };
   }, [handle]);

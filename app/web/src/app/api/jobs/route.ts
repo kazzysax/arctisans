@@ -8,6 +8,7 @@ import { artisanLevel } from "@/lib/level";
 import { proposeCalls } from "@/lib/tx";
 import { after } from "next/server";
 import { runNative, touchesNative } from "@/lib/native/worker";
+import { getReputation } from "@/lib/queries";
 
 // Draft body: either explicit upfront/milestones, or just `total` (+ optional `upfrontBps`). Default: paid on approval.
 // Upfront is only allowed up to the artisan's onchain level (New 0%, Trusted 30%, Pro 50%); the escrow enforces it too.
@@ -58,5 +59,7 @@ export const POST = route("jobs-create", 30, async (req) => {
 export const GET = route("jobs-list", 120, async (req) => {
   const { wallet } = requireSession(req);
   const r = await db().execute({ sql: "SELECT id, chain_job_id, client, artisan, terms, status, created_at FROM jobs WHERE client=? OR artisan=? ORDER BY created_at DESC LIMIT 100", args: [wallet, wallet] });
-  return ok({ items: r.rows.map((x) => ({ id: String(x.id), chainJobId: x.chain_job_id == null ? null : Number(x.chain_job_id), client: String(x.client), artisan: String(x.artisan), status: String(x.status), terms: JSON.parse(String(x.terms)), createdAt: Number(x.created_at) })) });
+  const rep = await getReputation(wallet);
+  const stats = { paid: rep.paid, earned: rep.earned, spent: rep.spent, tipsReceived: rep.tipsReceived, tipsCount: rep.tipsCount, tipsGiven: rep.tipsGiven, ratingAvg: rep.ratingAvg, ratingCount: rep.ratingCount };
+  return ok({ stats, items: r.rows.map((x) => ({ id: String(x.id), chainJobId: x.chain_job_id == null ? null : Number(x.chain_job_id), client: String(x.client), artisan: String(x.artisan), status: String(x.status), terms: JSON.parse(String(x.terms)), createdAt: Number(x.created_at) })) });
 });

@@ -8,7 +8,7 @@ export type TipEv = { to: string; from: string; amount: number };
 export type Reputation = {
   wallet: string;
   jobsAsArtisan: number; jobsAsClient: number;
-  completed: number; settled: number; deadlocked: number; abandonedByMe: number; cancelled: number;
+  completed: number; paid: number; settled: number; deadlocked: number; abandonedByMe: number; cancelled: number;
   earned: number; spent: number;
   onTimeRate: number | null;
   ratingAvg: number | null; ratingCount: number; ratingsGiven: number;
@@ -28,7 +28,7 @@ export function computeReputation(
 ): Reputation {
   const me = lc(wallet);
   const r: Reputation = {
-    wallet: me, jobsAsArtisan: 0, jobsAsClient: 0, completed: 0, settled: 0, deadlocked: 0, abandonedByMe: 0, cancelled: 0,
+    wallet: me, jobsAsArtisan: 0, jobsAsClient: 0, completed: 0, paid: 0, settled: 0, deadlocked: 0, abandonedByMe: 0, cancelled: 0,
     earned: 0, spent: 0, onTimeRate: null, ratingAvg: null, ratingCount: 0, ratingsGiven: 0,
     tipsReceived: 0, tipsCount: 0, tipsGiven: 0, uniqueClients: 0, skills: {},
   };
@@ -42,6 +42,7 @@ export function computeReputation(
     if (asArtisan) {
       r.jobsAsArtisan++;
       r.earned += j.paidToArtisan;
+      if ((j.outcome === OUTCOME.Completed || j.outcome === OUTCOME.Settled) && j.paidToArtisan > 0) r.paid++;
       if (j.outcome === OUTCOME.Completed) {
         r.completed++;
         clients.add(lc(j.client));

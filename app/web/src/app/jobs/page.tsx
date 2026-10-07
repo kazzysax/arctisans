@@ -8,6 +8,7 @@ import { Roll } from "@/components/fun/Roll";
 import { Stat } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 
+const CLOSED = ["Completed", "Settled", "Deadlocked", "Abandoned", "Cancelled", "Declined"];
 const FILTERS = ["All", "Hiring", "Working", "Done"] as const;
 
 type JobTerms = { client: string; artisan: string; title: string; deadline: number };
@@ -40,6 +41,7 @@ export default function Jobs() {
   const myWallet = auth.status === "in" ? auth.profile.wallet : "";
   const [f, setF] = useState<(typeof FILTERS)[number]>("All");
   const [jobs, setJobs] = useState<ApiJob[] | null>(null);
+  const [stats, setStats] = useState<{ paid: number; earned: number; tipsReceived: number; tipsCount: number; tipsGiven: number; ratingAvg: number | null; ratingCount: number } | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [sheet, setSheet] = useState<"in" | "out" | null>(null);
   const loadBalance = () => fetch("/api/wallet/balance", { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject()).then((j: { balance: number }) => setBalance(j.balance)).catch(() => null);
@@ -48,21 +50,21 @@ export default function Jobs() {
   useEffect(() => {
     fetch("/api/jobs", { credentials: "include" })
       .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((j: { items?: ApiJob[] }) => setJobs(j.items ?? []))
+      .then((j: { items?: ApiJob[]; stats?: NonNullable<typeof stats> }) => { setJobs(j.items ?? []); setStats(j.stats ?? null); })
       .catch(() => setJobs([]));
   }, []);
 
   const list = (jobs ?? []).filter((j) => {
     const isClient = j.client === myWallet;
     const isArtisan = j.artisan === myWallet;
-    const done = j.status === "Completed" || j.status === "Cancelled";
+    const done = CLOSED.includes(j.status);
     if (f === "Done") return done;
     if (f === "Hiring") return isClient && !done;
     if (f === "Working") return isArtisan && !done;
     return true;
   });
 
-  const openJobs = (jobs ?? []).filter((j) => j.status !== "Completed" && j.status !== "Cancelled");
+  const openJobs = (jobs ?? []).filter((j) => !CLOSED.includes(j.status));
 
   return (
     <div className="relative mx-auto min-h-dvh max-w-[560px] pb-32">
@@ -88,10 +90,11 @@ export default function Jobs() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 border-t border-line p-4">
+        <div className="grid grid-cols-4 gap-2 border-t border-line p-4">
           <Stat value={`${openJobs.length}`} label="Open" />
-          <Stat value={`${list.filter((j) => j.status === "Completed").length}`} label="Done" />
-          <Stat value="—" label="Tips" />
+          <Stat value={`${(jobs ?? []).filter((j) => j.status === "Completed" || j.status === "Settled").length}`} label="Done" />
+          <Stat value={stats && stats.tipsReceived ? `$${(stats.tipsReceived / 1e6).toFixed(2)}` : "—"} label={stats && stats.tipsCount ? `Tips · ${stats.tipsCount}` : "Tips"} />
+          <Stat value={stats?.ratingAvg ? `${stats.ratingAvg.toFixed(1)}★` : "—"} label="Rating" />
         </div>
       </div>
 

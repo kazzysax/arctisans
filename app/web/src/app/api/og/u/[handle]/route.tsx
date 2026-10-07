@@ -29,7 +29,7 @@ export async function GET(req: Request) {
           <div style={{ fontSize: 34, color: "#aeb6c8", marginTop: 8 }}>{p.title ?? `@${p.handle}`}</div>
         </div>
         <div style={{ display: "flex" }}>
-          {stat(String(rep.completed), "jobs completed")}
+          {stat(String(rep.paid ?? rep.completed), "paid jobs")}
           {stat(rep.ratingAvg ? `${rep.ratingAvg}★` : "New", rep.ratingCount ? `${rep.ratingCount} reviews` : "no reviews yet")}
           {stat(`$${microToUsdc(rep.earned)}`, "earned on Arc")}
         </div>

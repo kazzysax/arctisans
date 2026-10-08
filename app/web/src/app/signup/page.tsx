@@ -24,7 +24,12 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null);
   const [adult, setAdult] = useState(false);
   const [agree, setAgree] = useState(false);
-  const consent = adult && agree;
+  // Age and terms are asked once. After the first successful sign-in this device remembers it and the boxes go away.
+  const [returning, setReturning] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only readable after mount
+  useEffect(() => { try { if (localStorage.getItem("arc_consent_v1") === "1") setReturning(true); } catch { /* private mode: just show the boxes */ } }, []);
+  const remember = () => { try { localStorage.setItem("arc_consent_v1", "1"); } catch { /* ignore */ } };
+  const consent = returning || (adult && agree);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const hasCircle = circleReady();
 
@@ -37,6 +42,7 @@ export default function SignUp() {
     try {
       const login = await signInWithEmail(email); // emails the code, opens Circle's window to enter it
       const { hasProfile } = await finishLogin(login); // creates the wallet on first visit, then our session
+      remember();
       r.push(hasProfile ? afterLogin() : "/setup");
     } catch (e) {
       setError((e as Error).message);
@@ -57,6 +63,7 @@ export default function SignUp() {
         const login = await resumeGoogleLogin();
         if (!login) return;
         const { hasProfile } = await finishLogin(login);
+        remember();
         r.push(hasProfile ? afterLogin() : "/setup");
       } catch (e) { if (live) setError((e as Error).message); }
       finally { if (live) setLoading(false); }
@@ -117,10 +124,10 @@ export default function SignUp() {
                 {loading ? "Sending…" : "Continue with email"}
               </button>
             </div>
-            <div className="mt-6 flex flex-col gap-3 text-[13px] leading-snug text-white/70">
+            {!returning && <div className="mt-6 flex flex-col gap-3 text-[13px] leading-snug text-white/70">
               <label className="flex cursor-pointer items-start gap-3"><input id="age-18" type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-white" /><span>I am 18 or older.</span></label>
               <label className="flex cursor-pointer items-start gap-3"><input id="agree-terms" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-white" /><span>I agree to the <Link href="/terms" target="_blank" className="text-white underline underline-offset-4">Terms of Use</Link> and the <Link href="/privacy" target="_blank" className="text-white underline underline-offset-4">Privacy Policy</Link>.</span></label>
-            </div>
+            </div>}
             <p className="mt-5 text-center text-[11.5px] leading-relaxed text-white/40">No seed phrase. Your wallet is created for you.</p>
           </div>
         ) : (

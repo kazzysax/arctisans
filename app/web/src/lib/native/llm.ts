@@ -22,6 +22,23 @@ export async function chat(system: string, user: string, max = 700): Promise<str
   return t;
 }
 
+/** Like chat(), but the model may search the web first (OpenRouter's web plugin). Falls back to a plain answer if search is unavailable. */
+export async function chatWeb(system: string, user: string, max = 1500): Promise<{ text: string; sources: string[] }> {
+  try {
+    const j = (await call({ model: process.env.DREAMS_RESEARCH_MODEL ?? TEXT(), max_tokens: max, plugins: [{ id: "web", max_results: 5 }], messages: [{ role: "system", content: system }, { role: "user", content: user }] })) as unknown as {
+      choices: { message: { content?: string; annotations?: { type?: string; url_citation?: { url?: string } }[] } }[];
+    };
+    const m = j.choices[0]?.message;
+    const text = (m?.content ?? "").trim();
+    if (!text) throw new Error("empty model reply");
+    const sources = [...new Set((m?.annotations ?? []).map((a) => a.url_citation?.url ?? "").filter((u) => /^https?:\/\//.test(u)))].slice(0, 6);
+    return { text, sources };
+  } catch (e) {
+    console.error("[llm] web search failed, answering without it:", (e as Error).message);
+    return { text: await chat(system, user, max), sources: [] };
+  }
+}
+
 /** Returns PNG/JPEG bytes. */
 export async function image(prompt: string): Promise<{ buf: Buffer; type: string }> {
   const j = await call({ model: IMAGE(), modalities: ["image", "text"], messages: [{ role: "user", content: prompt }] });

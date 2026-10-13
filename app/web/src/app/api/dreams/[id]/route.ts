@@ -14,7 +14,7 @@ export const GET = route("dream-get", 120, async (req) => {
 
 const B = z.object({
   hash: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
-  answers: z.record(z.string().max(24), z.object({ optionId: z.string().max(24) })).optional(),
+  answers: z.record(z.string().max(24), z.object({ optionIds: z.array(z.string().max(24)).max(6) })).optional(),
 });
 
 /** One endpoint moves the dream forward: send the payment hash first, then answers as the dogs ask. */
@@ -32,7 +32,7 @@ export const POST = route("dream-step", 20, async (req) => {
     d = (await getDream(id, wallet))!;
   }
   try {
-    const next = await advance(d, b.answers ? Object.fromEntries(Object.entries(b.answers).map(([k, v]) => [k, { optionId: v.optionId, label: "" }])) : undefined);
+    const next = await advance(d, b.answers);
     return ok(view(next));
   } catch (e) {
     const m = (e as Error).message;

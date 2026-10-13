@@ -4,11 +4,11 @@ import { TopBar } from "@/components/ui";
 import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 
 type Opt = { id: string; label: string };
-type Q = { id: string; text: string; options: Opt[] };
+type Q = { id: string; section: string; text: string; multi: boolean; options: Opt[] };
 type V = {
   id: string; idea: string; status: string; questions: Q[]; followups: Q[]; ready: boolean; skills: string[]; callsLeft: number;
-  plan: null | { name: string; oneLiner: string; vibe: string; audience: string; screens: string[]; rules: string[]; mustNot: string[] };
-  research: null | { use: { piece: string; why: string }[]; risks: string[]; similar: string[]; skills: string[] };
+  plan: null | { name: string; oneLiner: string; audience: string; roles: string[]; mustHave: string[]; later: string[]; acceptance: string[]; vibe: string; screens: string[]; rules: string[]; mustNot: string[] };
+  research: null | { stack: { layer: string; choice: string; why: string }[]; architecture: string; dataModel: string[]; integrations: { name: string; why: string }[]; arcPieces: { piece: string; why: string }[]; studioCovers: string[]; outsideStudio: string[]; milestones: string[]; risks: string[]; similar: { name: string; lesson: string }[]; skills: string[]; sources: string[] };
 };
 type Stage = "idea" | "paying" | "asking" | "research" | "follow" | "done";
 
@@ -33,8 +33,44 @@ function Dog({ k, size = 64, wag = false }: { k: (typeof DOGS)[number]["k"]; siz
   );
 }
 
+
+type Dk = (typeof DOGS)[number]["k"];
 const STEPS = ["Plan", "Research", "Build"];
-const stepOf = (s: Stage) => (s === "asking" ? 0 : s === "research" || s === "follow" ? 1 : s === "done" ? 2 : -1);
+const stepOf = (s: Stage) => (s === "asking" ? 0 : s === "research" ? (1) : s === "follow" ? 1 : s === "done" ? 2 : -1);
+const SECTIONS = [["specs", "Specs"], ["features", "Features"], ["design", "Design"]] as const;
+const usd = (n: number) => `$${n.toFixed(2)}`;
+
+/** The dogs' running budget. A ledger inside the room: it shows how the $1 is shared out as work moves along. Not an onchain transfer yet. */
+const START = { mochi: 0.40, scout: 0.40, bolt: 0.20 } as Record<Dk, number>;
+const PAYS: { from: Dk; to: Dk; amt: number; why: string; at: Stage[] }[] = [
+  { from: "mochi", to: "scout", amt: 0.08, why: "for the finished plan", at: ["follow", "done"] },
+  { from: "scout", to: "bolt", amt: 0.08, why: "for the research", at: ["done"] },
+];
+const balances = (stage: Stage) => {
+  const b = { ...START };
+  for (const p of PAYS) if (p.at.includes(stage)) { b[p.from] -= p.amt; b[p.to] += p.amt; }
+  return b;
+};
+
+type Line = { dog: Dk; text: string; pay?: (typeof PAYS)[number] };
+/** What the dogs say, built from the real work so far. Nothing here calls a model. */
+function script(stage: Stage, v: V | null, busy: boolean): Line[] {
+  const L: Line[] = [{ dog: "mochi", text: "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." }];
+  if (stage === "idea") return L;
+  L.push({ dog: "bolt", text: "Entry is in. Budget is split between us, and I'll keep the ledger." });
+  if (stage === "paying") return L;
+  L.push({ dog: "mochi", text: busy && stage === "asking" ? "Writing your questions now…" : "Nine questions, three sections. Answer like it is a real project, because it is." });
+  if (stage === "asking") return L;
+  if (v?.plan) L.push({ dog: "mochi", text: `Plan Card done: ${v.plan.name}, with ${v.plan.mustHave.length} must-haves and ${v.plan.acceptance.length} checks.` });
+  if (stage === "research") { L.push({ dog: "scout", text: "My turn. Searching the web for how this kind of product gets built…" }); return L; }
+  L.push({ dog: "scout", text: `Done digging${v?.research?.sources.length ? `, ${v.research.sources.length} sources read` : ""}. I found ${v?.followups.length ?? 0} gap${(v?.followups.length ?? 0) === 1 ? "" : "s"} only you can settle.` });
+  L.push({ dog: "mochi", text: "Thanks Scout, here is your cut.", pay: PAYS[0] });
+  if (stage === "follow") return L;
+  L.push({ dog: "bolt", text: "Got it all. Packing the Dream Sheet for your Studio." });
+  L.push({ dog: "scout", text: "Sending Bolt his share.", pay: PAYS[1] });
+  L.push({ dog: "bolt", text: "Dream Sheet is ready. Time to hand it to Studio." });
+  return L;
+}
 
 async function api(path: string, body?: unknown) {
   const r = await fetch(path, { method: body ? "POST" : "GET", credentials: "include", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -43,16 +79,23 @@ async function api(path: string, body?: unknown) {
   return j;
 }
 
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return <div className="mt-3 rounded-[24px] hairline p-5"><div className="text-[12px] uppercase tracking-[0.14em] text-faint">{title}</div>{children}</div>;
+}
+const Bullets = ({ items }: { items: string[] }) => <ul className="mt-1.5 text-[14px] leading-relaxed">{items.map((x) => <li key={x} className="mb-0.5">· {x}</li>)}</ul>;
+
 export default function Dreams() {
   const [stage, setStage] = useState<Stage>("idea");
   const [idea, setIdea] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [v, setV] = useState<V | null>(null);
-  const [pick, setPick] = useState<Record<string, string>>({});
+  const [pick, setPick] = useState<Record<string, string[]>>({});
   const [sheet, setSheet] = useState<{ sheet: string; command: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
+  const [tab, setTab] = useState(0);
+  const [report, setReport] = useState(false);
 
   useEffect(() => { // resume an unfinished dream after a reload
     const id = localStorage.getItem("dream:id"); if (!id) return;
@@ -60,19 +103,20 @@ export default function Dreams() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function enter(x: V) {
-    setV(x); setPick({});
+    setV(x); setPick({}); setTab(0);
     if (x.status === "asking") setStage("asking");
     else if (x.status === "researched") setStage("follow");
     else if (x.status === "ready") { setStage("done"); api(`/api/dreams/${x.id}/sheet`).then(setSheet).catch(() => {}); }
-    else if (x.status === "paid") void step(x.id, {});
+    else if (x.status === "paid" || x.status === "planned") { setStage(x.status === "paid" ? "asking" : "research"); void step(x.id, {}); }
     else if (x.status === "new") setStage("paying");
   }
   async function step(id: string, body: unknown) {
     setBusy(true); setErr(null);
+    const was = stage;
     try {
-      if (v?.status === "asking" || (body as { answers?: unknown }).answers) setStage("research");
+      if ((body as { answers?: unknown }).answers) setStage("research");
       const x = await api(`/api/dreams/${id}`, body); enter(x);
-    } catch (e) { setErr((e as Error).message); if (v?.status === "asking") setStage("asking"); } finally { setBusy(false); }
+    } catch (e) { setErr((e as Error).message); if (was === "asking" || was === "follow") setStage(was); } finally { setBusy(false); }
   }
   async function begin() {
     setErr(null); setBusy(true);
@@ -96,16 +140,28 @@ export default function Dreams() {
     throw new Error("The payment is still settling. Open the arena again in a minute.");
   }
   const copy = (k: string, t: string) => { void navigator.clipboard.writeText(t); setCopied(k); setTimeout(() => setCopied(null), 1600); };
-  const reset = () => { localStorage.removeItem("dream:id"); setV(null); setSheet(null); setIdea(""); setStage("idea"); setErr(null); };
+  const reset = () => { localStorage.removeItem("dream:id"); setV(null); setSheet(null); setIdea(""); setStage("idea"); setErr(null); setReport(false); };
+  const toggle = (q: Q, id: string) => setPick((p) => {
+    const cur = p[q.id] ?? [];
+    return { ...p, [q.id]: q.multi ? (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) : [id] };
+  });
+
   const qs = stage === "asking" ? v?.questions ?? [] : stage === "follow" ? v?.followups ?? [] : [];
-  const all = qs.length > 0 && qs.every((q) => pick[q.id]);
-  const dog = stage === "idea" || stage === "paying" ? "mochi" : stage === "asking" ? "mochi" : stage === "research" || stage === "follow" ? "scout" : "bolt";
+  const all = qs.length > 0 && qs.every((q) => (pick[q.id] ?? []).length > 0);
+  const lines = script(stage, v, busy);
+  const last = lines[lines.length - 1];
+  const speaker: Dk = stage === "asking" ? "mochi" : stage === "research" ? "scout" : stage === "follow" ? "scout" : stage === "done" ? "bolt" : "mochi";
+  const bal = balances(stage);
+  const lastPay = [...lines].reverse().find((l) => l.pay)?.pay;
   const s = stepOf(stage);
+  const sections = stage === "asking" ? SECTIONS.filter(([k]) => qs.some((q) => q.section === k)) : [];
+  const shown = stage === "asking" && sections.length ? qs.filter((q) => q.section === sections[Math.min(tab, sections.length - 1)][0]) : qs;
+  const answered = (k: string) => qs.filter((q) => q.section === k).every((q) => (pick[q.id] ?? []).length > 0);
 
   return (
     <main className="mx-auto min-h-dvh max-w-[560px] pb-24">
       <TopBar back="/create" title="Arcdreams" right={stage !== "idea" ? <button onClick={reset} className="text-[13px] text-muted">Start over</button> : undefined} />
-      <style>{`@keyframes dogwag{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}@keyframes pop{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes sniff{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}`}</style>
+      <style>{`@keyframes dogwag{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}@keyframes pop{0%{transform:scale(.92);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes sniff{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}@keyframes coin{0%{transform:translate(0,0) scale(.6);opacity:0}15%{opacity:1;transform:translate(0,-14px) scale(1)}85%{opacity:1}100%{transform:translate(var(--dx),-2px) scale(.9);opacity:0}}@keyframes say{0%{transform:translateY(6px);opacity:0}100%{transform:translateY(0);opacity:1}}`}</style>
 
       {s >= 0 && (
         <div className="px-5 pt-1">
@@ -117,21 +173,37 @@ export default function Dreams() {
         </div>
       )}
 
-      <div className="px-5 pt-5">
-        <div className="flex items-center gap-4 rounded-[24px] hairline p-4" style={{ animation: "pop 400ms var(--ease-out) both" }} key={dog + stage}>
-          <Dog k={dog} size={68} wag={!busy} />
-          <div className="min-w-0 flex-1">
-            <div className="text-[12px] uppercase tracking-[0.14em] text-faint">{DOGS.find((d) => d.k === dog)!.name} · {DOGS.find((d) => d.k === dog)!.role}</div>
-            <div className="mt-1 text-[15px] leading-snug">
-              {stage === "idea" && "Hi! One line about what you want to build. Make it short and clear."}
-              {stage === "paying" && "Waiting for your $1 to land. This pays for our dogs' thinking."}
-              {stage === "asking" && (busy ? "Hold on, sniffing out your questions…" : "Four quick picks. Tap what feels right.")}
-              {stage === "research" && "Scout is digging through Arc for what fits and what could go wrong…"}
-              {stage === "follow" && "Scout found gaps in the plan. Two more picks."}
-              {stage === "done" && "Your Dream Sheet is ready. Time to hand it to Studio."}
-            </div>
+      {/* The workspace room: three desks, the speaker lit, coins crossing between desks. */}
+      <div className="px-5 pt-4">
+        <div className="relative overflow-hidden rounded-[26px] hairline px-3 pb-3 pt-4">
+          <div className="grid grid-cols-3 gap-2">
+            {DOGS.map((d) => {
+              const on = d.k === speaker;
+              return (
+                <div key={d.k} className="relative flex flex-col items-center">
+                  <div className={`transition-all duration-500 ${on ? "scale-105" : "opacity-60"}`} style={on && !busy ? { animation: "sniff 2.4s ease-in-out infinite" } : undefined}><Dog k={d.k} size={58} wag={on && !busy} /></div>
+                  <div className="mt-1 h-[3px] w-full rounded-full bg-[var(--line-strong)]" />
+                  <div className="mt-2 text-[13px] font-medium">{d.name}</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{d.role}</div>
+                  <div className="num mt-1 rounded-full hairline px-2 py-0.5 text-[11px]">{usd(stage === "idea" ? 0 : bal[d.k])}</div>
+                </div>
+              );
+            })}
+          </div>
+          {lastPay && (() => {
+            const i = DOGS.findIndex((d) => d.k === lastPay.from), j = DOGS.findIndex((d) => d.k === lastPay.to);
+            return <span key={lastPay.from + stage} aria-hidden className="num pointer-events-none absolute top-[84px] rounded-full bg-[var(--fg)] px-2 py-0.5 text-[11px] text-[var(--bg)]" style={{ left: `calc(${(i + 0.5) * 33.33}% - 22px)`, ["--dx" as string]: `${(j - i) * 33.33 * 4.6}px`, animation: "coin 1.6s ease-in-out both" }}>{usd(lastPay.amt)}</span>;
+          })()}
+          <div key={stage + last.text} className="mt-3 rounded-[18px] hairline p-3.5" style={{ animation: "say 380ms var(--ease-out) both" }}>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-faint">{DOGS.find((d) => d.k === last.dog)!.name}{last.pay ? ` · paid ${usd(last.pay.amt)} ${last.pay.why}` : ""}</div>
+            <div className="mt-1 text-[15px] leading-snug">{stage === "idea" ? "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." : last.text}</div>
           </div>
         </div>
+        {stage !== "idea" && lines.length > 1 && (
+          <details className="mt-2 text-[12px] text-muted"><summary className="cursor-pointer select-none">Room chat ({lines.length})</summary>
+            <ul className="mt-2 space-y-1.5">{lines.map((l, i) => <li key={i}><span className="font-medium text-fg">{DOGS.find((d) => d.k === l.dog)!.name}:</span> {l.text}{l.pay ? ` (${usd(l.pay.amt)} sent)` : ""}</li>)}</ul>
+          </details>
+        )}
       </div>
 
       {err && <p className="mx-5 mt-4 rounded-[16px] hairline p-3 text-[13px]">{err}</p>}
@@ -140,9 +212,6 @@ export default function Dreams() {
         <div className="rise px-5 pt-5">
           <textarea value={idea} onChange={(e) => setIdea(e.target.value.slice(0, 280))} rows={3} placeholder="e.g. A tip jar where fans tip a creator in USDC and see a leaderboard" className="field w-full resize-none" />
           <div className="mt-1 flex justify-between text-[12px] text-faint"><span>{idea.trim().length < 12 ? "A few more words" : "Good"}</span><span>{idea.length}/280</span></div>
-          <div className="mt-5 grid grid-cols-3 gap-2">{DOGS.map((d) => (
-            <div key={d.k} className="rounded-[18px] hairline p-3 text-center"><div className="mx-auto w-fit"><Dog k={d.k} size={44} /></div><div className="mt-1 text-[13px] font-medium">{d.name}</div><div className="mt-0.5 text-[11px] leading-snug text-muted">{d.say}</div></div>))}
-          </div>
           <button disabled={idea.trim().length < 12 || busy} onClick={begin} className="btn btn-solid mt-6 w-full">{busy ? "Opening the gate…" : "Enter the arena · $1 USDC"}</button>
           <p className="mt-3 text-center text-[12px] leading-relaxed text-faint">The $1 pays for the dogs&apos; planning and research. Your build then runs in your own Arc Studio, on testnet.</p>
         </div>
@@ -152,44 +221,34 @@ export default function Dreams() {
 
       {(stage === "asking" || stage === "follow") && qs.length > 0 && (
         <div className="px-5 pt-4">
-          {qs.map((q, qi) => (
-            <div key={q.id} className="rise mb-5" style={{ animationDelay: `${qi * 90}ms` }}>
-              <div className="num text-[12px] text-faint">{String(qi + 1).padStart(2, "0")}</div>
-              <div className="mt-1 text-[17px] font-medium tracking-[-0.02em]">{q.text}</div>
-              <div className="mt-3 grid gap-2">{q.options.map((o) => (
-                <button key={o.id} onClick={() => setPick((p) => ({ ...p, [q.id]: o.id }))} className={`press rounded-[18px] border px-4 py-3.5 text-left text-[15px] transition-colors ${pick[q.id] === o.id ? "border-fg bg-[var(--fg)] text-[var(--bg)]" : "hairline"}`}>{o.label}</button>))}
-              </div>
+          {sections.length > 1 && (
+            <div className="mb-4 grid grid-cols-3 gap-2">{sections.map(([k, n], i) => (
+              <button key={k} onClick={() => setTab(i)} className={`press rounded-full border px-3 py-2 text-[13px] ${i === Math.min(tab, sections.length - 1) ? "border-fg bg-[var(--fg)] text-[var(--bg)]" : "border-[var(--line-strong)]"}`}>{n}{answered(k) ? " ✓" : ""}</button>
+            ))}</div>
+          )}
+          {shown.map((q, qi) => (
+            <div key={q.id} className="rise mb-6" style={{ animationDelay: `${qi * 70}ms` }}>
+              <div className="text-[17px] font-medium leading-snug tracking-[-0.02em]">{q.text}</div>
+              {q.multi && <div className="mt-1 text-[12px] text-faint">Pick all that apply</div>}
+              <div className="mt-3 grid gap-2">{q.options.map((o) => {
+                const on = (pick[q.id] ?? []).includes(o.id);
+                return <button key={o.id} onClick={() => toggle(q, o.id)} className={`press rounded-[18px] border px-4 py-3.5 text-left text-[15px] transition-colors ${on ? "border-fg bg-[var(--fg)] text-[var(--bg)]" : "border-[var(--line-strong)]"}`}>{o.label}</button>;
+              })}</div>
             </div>))}
-          <button disabled={!all || busy} onClick={() => step(v!.id, { answers: Object.fromEntries(Object.entries(pick).map(([k, x]) => [k, { optionId: x }])) })} className="btn btn-solid w-full">{busy ? "The dogs are working…" : stage === "asking" ? "Send to Scout" : "Pack the Dream Sheet"}</button>
+          {stage === "asking" && sections.length > 1 && Math.min(tab, sections.length - 1) < sections.length - 1 && (
+            <button onClick={() => { setTab((t) => t + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="btn btn-ghost mb-3 w-full">Next: {sections[Math.min(tab, sections.length - 1) + 1][1]}</button>
+          )}
+          <button disabled={!all || busy} onClick={() => step(v!.id, { answers: Object.fromEntries(Object.entries(pick).map(([k, x]) => [k, { optionIds: x }])) })} className="btn btn-solid w-full">{busy ? "The dogs are working…" : stage === "asking" ? (all ? "Send to the dogs" : `Answer all ${qs.length} to continue`) : "Finish the Dream Sheet"}</button>
         </div>
       )}
 
-      {stage === "research" && (
-        <div className="flex justify-center px-5 pt-10"><div style={{ animation: "sniff 1.2s ease-in-out infinite" }}><Dog k="scout" size={96} /></div></div>
-      )}
+      {stage === "research" && <p className="px-5 pt-6 text-center text-[13px] text-muted">{busy ? "This takes about half a minute. The dogs are reading real sources." : "Starting…"}</p>}
 
       {stage === "done" && v && (
-        <div className="rise px-5 pt-5">
-          {v.plan && (
-            <div className="rounded-[24px] hairline p-5">
-              <div className="text-[12px] uppercase tracking-[0.14em] text-faint">Plan Card</div>
-              <div className="mt-1 text-[22px] font-medium tracking-[-0.02em]">{v.plan.name}</div>
-              <p className="mt-1 text-[14px] text-muted">{v.plan.oneLiner}</p>
-              <div className="mt-4 text-[12px] uppercase tracking-[0.14em] text-faint">Screens</div>
-              <ul className="mt-1 text-[14px] leading-relaxed">{v.plan.screens.map((x) => <li key={x}>· {x}</li>)}</ul>
-              <div className="mt-4 text-[12px] uppercase tracking-[0.14em] text-faint">Rules the contract holds</div>
-              <ul className="mt-1 text-[14px] leading-relaxed">{v.plan.rules.map((x) => <li key={x}>· {x}</li>)}</ul>
-            </div>)}
-          {v.research && (
-            <div className="mt-3 rounded-[24px] hairline p-5">
-              <div className="text-[12px] uppercase tracking-[0.14em] text-faint">Research Card</div>
-              <ul className="mt-2 text-[14px] leading-relaxed">{v.research.use.map((u) => <li key={u.piece} className="mb-1"><span className="font-medium">{u.piece}</span> <span className="text-muted">· {u.why}</span></li>)}</ul>
-              {v.research.risks.length > 0 && <><div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Watch out for</div><ul className="mt-1 text-[14px] leading-relaxed">{v.research.risks.map((x) => <li key={x}>· {x}</li>)}</ul></>}
-              {v.skills.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{v.skills.map((k) => <span key={k} className="rounded-full hairline px-3 py-1 text-[12px]">{k}</span>)}</div>}
-            </div>)}
+        <div className="rise px-5 pt-4">
           {sheet && (
-            <div className="mt-3 rounded-[24px] hairline p-5">
-              <div className="flex items-center gap-3"><Dog k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Runs in your own Arc Studio, never ours.</div></div></div>
+            <div className="rounded-[24px] hairline p-5">
+              <div className="flex items-center gap-3"><Dog k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Runs in your own Arc Studio, on your account</div></div></div>
               <ol className="mt-4 space-y-2 text-[14px] leading-relaxed text-muted">
                 <li><span className="num text-fg">1.</span> Install Studio once: <code className="text-fg">npm i -g @circle-fin/arc-studio-cli</code> and run <code className="text-fg">arc-studio login</code>.</li>
                 <li><span className="num text-fg">2.</span> Save the sheet as <code className="text-fg">dream.md</code> in a folder.</li>
@@ -197,11 +256,41 @@ export default function Dreams() {
               </ol>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button onClick={() => copy("sheet", sheet.sheet)} className="btn btn-solid">{copied === "sheet" ? "Copied" : "Copy sheet"}</button>
-                <button onClick={() => copy("cmd", sheet.command)} className="btn btn-ghost">{copied === "cmd" ? "Copied" : "Copy command"}</button>
+                <button onClick={() => copy("cmd", sheet.command)} className="btn btn-ghost">{copied === "cmd" ? "Copied" : "Copy run line"}</button>
               </div>
               <a className="mt-3 block text-center text-[13px] text-muted underline underline-offset-4" href={`data:text/markdown;charset=utf-8,${encodeURIComponent(sheet.sheet)}`} download="dream.md">Download dream.md</a>
               <p className="mt-3 text-[12px] leading-relaxed text-faint">Studio deploys to Arc testnet only. Review everything before using real money.</p>
             </div>)}
+
+          <button onClick={() => setReport((r) => !r)} className="btn btn-ghost mt-3 w-full">{report ? "Hide the full project report" : "Read the full project report"}</button>
+          {report && v.plan && (<>
+            <Card title={`Plan · ${v.plan.name}`}>
+              <p className="mt-1 text-[14px] text-muted">{v.plan.oneLiner}</p>
+              <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Users and roles</div><Bullets items={v.plan.roles} />
+              <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Must-have features</div><Bullets items={v.plan.mustHave} />
+              {v.plan.later.length > 0 && <><div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Later</div><Bullets items={v.plan.later} /></>}
+              <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Acceptance criteria</div><Bullets items={v.plan.acceptance} />
+              <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Design</div><p className="mt-1.5 text-[14px]">{v.plan.vibe}</p><Bullets items={v.plan.screens} />
+              <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Contract rules</div><Bullets items={v.plan.rules} />
+            </Card>
+            {v.research && (<>
+              <Card title="Research · stack and architecture">
+                <ul className="mt-2 text-[14px] leading-relaxed">{v.research.stack.map((x) => <li key={x.layer} className="mb-1.5"><span className="font-medium capitalize">{x.layer}</span>: {x.choice} <span className="text-muted">· {x.why}</span></li>)}</ul>
+                <p className="mt-3 text-[14px] leading-relaxed">{v.research.architecture}</p>
+                <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Data</div><Bullets items={v.research.dataModel} />
+              </Card>
+              <Card title="Where Studio fits">
+                <div className="mt-1 text-[13px] font-medium">Studio builds</div><Bullets items={v.research.studioCovers} />
+                {v.research.outsideStudio.length > 0 && <><div className="mt-3 text-[13px] font-medium">You handle outside Studio</div><Bullets items={v.research.outsideStudio} /></>}
+              </Card>
+              <Card title="Milestones, risks and similar products">
+                <ol className="mt-2 text-[14px] leading-relaxed">{v.research.milestones.map((x, i) => <li key={x} className="mb-1"><span className="num text-faint">{i + 1}.</span> {x}</li>)}</ol>
+                <div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Watch out for</div><Bullets items={v.research.risks} />
+                {v.research.similar.length > 0 && <><div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Similar products</div><ul className="mt-1.5 text-[14px] leading-relaxed">{v.research.similar.map((x) => <li key={x.name} className="mb-1"><span className="font-medium">{x.name}</span> <span className="text-muted">· {x.lesson}</span></li>)}</ul></>}
+                {v.research.sources.length > 0 && <><div className="mt-3 text-[12px] uppercase tracking-[0.14em] text-faint">Sources Scout read</div><ul className="mt-1.5 break-all text-[12px] leading-relaxed text-muted">{v.research.sources.map((u) => <li key={u}><a href={u} target="_blank" rel="noreferrer noopener" className="underline underline-offset-4">{u.replace(/^https?:\/\/(www\.)?/, "").slice(0, 60)}</a></li>)}</ul></>}
+              </Card>
+            </>)}
+          </>)}
           <button onClick={reset} className="btn btn-ghost mt-4 w-full">Dream something else</button>
         </div>
       )}

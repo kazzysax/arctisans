@@ -67,7 +67,7 @@ export default function Create() {
       <TopBar back="/social" title="Create" />
       <Link href="/dreams" className="press rise mx-5 mt-2 block overflow-hidden rounded-[26px] hairline" aria-label="Arcdreams: three dogs plan your app, then you build it in Arc Studio">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/arcdreams-banner.webp" alt="Arcdreams: Mochi the planner, Scout the researcher and Bolt the builder" width={1200} height={640} className="block h-auto w-full" />
+        <img src="/arcdreams-banner.webp" alt="Arcdreams: Mochi the planner, Scout the researcher and Bolt the builder" width={1200} height={621} className="block h-auto w-full" />
       </Link>
       <div className="flex flex-col gap-3 px-5 pt-4">
         {CHOICES.map((c, i) => {

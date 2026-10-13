@@ -5,7 +5,9 @@ import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 
 type Opt = { id: string; label: string };
 type Q = { id: string; section: string; text: string; multi: boolean; options: Opt[] };
+type Pay = { id: string; from: string; to: string; micro: number; status: "paid" | "failed"; tx: string | null; why: string };
 type V = {
+  payments: Pay[];
   id: string; idea: string; status: string; questions: Q[]; followups: Q[]; ready: boolean; skills: string[]; callsLeft: number;
   plan: null | { name: string; oneLiner: string; audience: string; roles: string[]; mustHave: string[]; later: string[]; acceptance: string[]; vibe: string; screens: string[]; rules: string[]; mustNot: string[] };
   research: null | { stack: { layer: string; choice: string; why: string }[]; architecture: string; dataModel: string[]; integrations: { name: string; why: string }[]; arcPieces: { piece: string; why: string }[]; studioCovers: string[]; outsideStudio: string[]; milestones: string[]; risks: string[]; similar: { name: string; lesson: string }[]; skills: string[]; sources: string[] };
@@ -46,8 +48,11 @@ const PAYS: { from: Dk; to: Dk; amt: number; why: string; at: Stage[] }[] = [
   { from: "mochi", to: "scout", amt: 0.08, why: "for the finished plan", at: ["follow", "done"] },
   { from: "scout", to: "bolt", amt: 0.08, why: "for the research", at: ["done"] },
 ];
-const balances = (stage: Stage) => {
+/** Real settled payments move the balances. With none (Nanopayments off, or a payment failed) the room shows the practice split, labelled as such. */
+const balances = (stage: Stage, real: Pay[]) => {
   const b = { ...START };
+  const paid = real.filter((p) => p.status === "paid");
+  if (paid.length) { for (const p of paid) { b[p.from as Dk] -= p.micro / 1e6; b[p.to as Dk] += p.micro / 1e6; } return b; }
   for (const p of PAYS) if (p.at.includes(stage)) { b[p.from] -= p.amt; b[p.to] += p.amt; }
   return b;
 };
@@ -151,7 +156,9 @@ export default function Dreams() {
   const lines = script(stage, v, busy);
   const last = lines[lines.length - 1];
   const speaker: Dk = stage === "asking" ? "mochi" : stage === "research" ? "scout" : stage === "follow" ? "scout" : stage === "done" ? "bolt" : "mochi";
-  const bal = balances(stage);
+  const real = v?.payments ?? [];
+  const settled = real.filter((p) => p.status === "paid");
+  const bal = balances(stage, real);
   const lastPay = [...lines].reverse().find((l) => l.pay)?.pay;
   const s = stepOf(stage);
   const sections = stage === "asking" ? SECTIONS.filter(([k]) => qs.some((q) => q.section === k)) : [];
@@ -199,6 +206,14 @@ export default function Dreams() {
             <div className="mt-1 text-[15px] leading-snug">{stage === "idea" ? "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." : last.text}</div>
           </div>
         </div>
+        {stage !== "idea" && (
+          <p className="mt-2 text-[12px] text-faint">
+            {settled.length ? `${settled.length} payment${settled.length === 1 ? "" : "s"} settled on Arc through Circle Nanopayments` : real.length ? "A payment did not settle, so the dogs worked on the house." : "Practice ledger: shows how the budget is shared."}
+          </p>
+        )}
+        {settled.length > 0 && (
+          <ul className="mt-1 space-y-1 text-[12px] text-muted">{settled.map((p) => <li key={p.id}>{DOGS.find((d) => d.k === p.from)!.name} paid {DOGS.find((d) => d.k === p.to)!.name} {usd(p.micro / 1e6)} {p.why}{p.tx ? ` · ${p.tx.slice(0, 10)}…` : ""}</li>)}</ul>
+        )}
         {stage !== "idea" && lines.length > 1 && (
           <details className="mt-2 text-[12px] text-muted"><summary className="cursor-pointer select-none">Room chat ({lines.length})</summary>
             <ul className="mt-2 space-y-1.5">{lines.map((l, i) => <li key={i}><span className="font-medium text-fg">{DOGS.find((d) => d.k === l.dog)!.name}:</span> {l.text}{l.pay ? ` (${usd(l.pay.amt)} sent)` : ""}</li>)}</ul>

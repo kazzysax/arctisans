@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { getDream, markPaid, verifyEntry, advance, view } from "@/lib/dreams/store";
+import { payments } from "@/lib/dreams/nano";
 
 export const maxDuration = 60;
 const idOf = (req: Request) => new URL(req.url).pathname.split("/").filter(Boolean).at(-1)!;
@@ -9,7 +10,7 @@ const idOf = (req: Request) => new URL(req.url).pathname.split("/").filter(Boole
 export const GET = route("dream-get", 120, async (req) => {
   const { wallet } = requireSession(req);
   const d = await getDream(idOf(req), wallet);
-  return d ? ok(view(d)) : fail(404, "Not found");
+  return d ? ok(view(d, await payments(d.id))) : fail(404, "Not found");
 });
 
 const B = z.object({
@@ -32,8 +33,8 @@ export const POST = route("dream-step", 20, async (req) => {
     d = (await getDream(id, wallet))!;
   }
   try {
-    const next = await advance(d, b.answers);
-    return ok(view(next));
+    const next = await advance(d, b.answers, new URL(req.url).origin);
+    return ok(view(next, await payments(next.id)));
   } catch (e) {
     const m = (e as Error).message;
     if (/^(Only|Over)/.test(m)) return fail(400, m);

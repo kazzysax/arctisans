@@ -5,6 +5,7 @@ import { USDC } from "@/lib/chain";
 import { erc20Abi } from "@/lib/abi_ext";
 import { ENTRY_MICRO, MAX_CALLS, buildSheet, checkAnswer, Question, PlanCard, ResearchCard, type Answers } from "./core";
 import { mochiQuestions, mochiPlan, scoutResearch } from "./llm";
+import { nanoOn, payDog, payments } from "./nano";
 
 /** Where the $1 goes: the Arctisans official account, unless DREAMS_TREASURY says otherwise. */
 export const treasury = () => (process.env.DREAMS_TREASURY ?? "0x3edfd25cc190023eb62c4bec6a3d821f5339a189").toLowerCase();
@@ -20,6 +21,11 @@ const toRow = (r: Record<string, unknown>): Row => ({
   sheet: r.sheet ? String(r.sheet) : null, skills: J(r.skills, []), calls: Number(r.calls),
 });
 
+/** For the paid dog endpoints, which are called by the other dog and have no user session. The dream id is a random UUID the server itself sent. */
+export async function getDreamById(id: string): Promise<Row | null> {
+  const r = await db().execute({ sql: "SELECT * FROM dreams WHERE id=?", args: [id] });
+  return r.rows[0] ? toRow(r.rows[0] as Record<string, unknown>) : null;
+}
 export async function getDream(id: string, wallet: string): Promise<Row | null> {
   const r = await db().execute({ sql: "SELECT * FROM dreams WHERE id=? AND wallet=?", args: [id, wallet] });
   return r.rows[0] ? toRow(r.rows[0] as Record<string, unknown>) : null;
@@ -56,9 +62,28 @@ function collect(qs: Question[], got: Record<string, { optionIds: string[] }> | 
   return out;
 }
 
+/** Scout's work. Safe to run twice: if the research is already saved, nothing is spent. */
+export async function doResearch(id: string): Promise<Row> {
+  const d = (await getDreamById(id))!;
+  if (d.status !== "planned") return d;
+  spend(d);
+  const research = await scoutResearch(d.idea, d.plan!);
+  await save(d.id, "status='researched', research=?, calls=calls+1", [JSON.stringify(research)]);
+  return { ...d, status: "researched", research, calls: d.calls + 1 };
+}
+/** Bolt's work: compile the Dream Sheet from the follow-up answers. Safe to run twice. */
+export async function doCompile(id: string, follow: Answers): Promise<Row> {
+  const d = (await getDreamById(id))!;
+  if (d.status !== "researched") return d;
+  const all: Answers = { ...d.answers, ...follow };
+  const sheet = buildSheet(d.idea, d.plan!, d.research!, all);
+  await save(d.id, "status='ready', answers=?, sheet=?, skills=?", [JSON.stringify(all), sheet.text, JSON.stringify(sheet.skills)]);
+  return { ...d, status: "ready", answers: all, sheet: sheet.text, skills: sheet.skills };
+}
+
 /** Advances the dream one step. Each step is safe to repeat: if it already happened, the saved result is returned.
  *  paid -> asking (Mochi's 9 questions) -> planned (Plan Card) -> researched (Scout, with web search) -> ready (Dream Sheet). */
-export async function advance(d: Row, got?: Record<string, { optionIds: string[] }>): Promise<Row> {
+export async function advance(d: Row, got?: Record<string, { optionIds: string[] }>, origin?: string): Promise<Row> {
   if (d.status === "new") throw new Error("Only paid dreams can start");
   if (d.status === "paid") {
     spend(d);
@@ -74,23 +99,27 @@ export async function advance(d: Row, got?: Record<string, { optionIds: string[]
     return { ...d, status: "planned", answers: clean, plan, calls: d.calls + 1 };
   }
   if (d.status === "planned") {
-    spend(d);
-    const research = await scoutResearch(d.idea, d.plan!);
-    await save(d.id, "status='researched', research=?, calls=calls+1", [JSON.stringify(research)]);
-    return { ...d, status: "researched", research, calls: d.calls + 1 };
+    // Mochi pays Scout through Circle Nanopayments, and Scout does the work when the payment lands. Any failure falls back to doing it here.
+    if (origin && nanoOn()) {
+      try { await payDog(d.id, "scout", `${origin}/api/dreams/dog/scout`); } catch (e) { console.error("[dreams] scout payment failed, working without it:", (e as Error).message); }
+      const again = (await getDreamById(d.id))!;
+      if (again.status !== "planned") return again;
+    }
+    return doResearch(d.id);
   }
   if (d.status === "researched") {
-    const f = d.research!.followups;
-    const all: Answers = { ...d.answers, ...collect(f, got) };
-    const sheet = buildSheet(d.idea, d.plan!, d.research!, all);
-    await save(d.id, "status='ready', answers=?, sheet=?, skills=?", [JSON.stringify(all), sheet.text, JSON.stringify(sheet.skills)]);
-    return { ...d, status: "ready", answers: all, sheet: sheet.text, skills: sheet.skills };
+    const follow = collect(d.research!.followups, got);
+    if (origin && nanoOn()) {
+      try { await payDog(d.id, "bolt", `${origin}/api/dreams/dog/bolt`); } catch (e) { console.error("[dreams] bolt payment failed, working without it:", (e as Error).message); }
+    }
+    return doCompile(d.id, follow);
   }
   return d; // ready: nothing more to do
 }
 
 /** What the browser may see: never the raw sheet before it is ready. */
-export const view = (d: Row) => ({
+export const view = (d: Row, pays: Awaited<ReturnType<typeof payments>> = []) => ({
+  payments: pays,
   id: d.id, idea: d.idea, status: d.status,
   questions: d.status === "asking" ? d.questions : [],
   followups: d.status === "researched" ? d.research!.followups : [],

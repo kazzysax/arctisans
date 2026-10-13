@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@circle-fin/w3s-pw-web-sdk": "^1.1.11",
+    "@circle-fin/x402-batching": "^3.5.0",
     "@libsql/client": "^0.18.0",
     "@vercel/blob": "^2.8.0",
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
     "ffmpeg-static": "^5.3.0",
     "lucide-react": "^1.49.0",
     "mediabunny": "^1.61.1",

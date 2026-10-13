@@ -76,6 +76,11 @@ CREATE TABLE IF NOT EXISTS dreams (
   created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS dreams_wallet ON dreams(wallet, created_at DESC);
+CREATE TABLE IF NOT EXISTS dream_payments (
+  id TEXT PRIMARY KEY, dream_id TEXT NOT NULL, from_dog TEXT NOT NULL, to_dog TEXT NOT NULL, amount_micro INTEGER NOT NULL,
+  status TEXT NOT NULL, tx TEXT, error TEXT, network TEXT NOT NULL, created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS dream_payments_dream ON dream_payments(dream_id, created_at);
 `;
 
 let migrated = false;

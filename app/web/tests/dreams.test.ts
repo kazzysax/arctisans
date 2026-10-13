@@ -164,3 +164,57 @@ describe("dream flow", () => {
     expect(await markPaid("b", "0xabc", "0xaa")).toBe("used");
   });
 });
+
+
+describe("nanopayments", () => {
+  const keys = JSON.stringify(Object.fromEntries(["mochi", "scout", "bolt"].map((d, i) => [d, { key: "0x" + String(i + 1).repeat(64) }])));
+  it("is off without keys, and rejects malformed keys", async () => {
+    const { dogs, nanoOn } = await import("@/lib/dreams/nano");
+    delete process.env.DREAMS_DOG_KEYS; expect(nanoOn()).toBe(false);
+    process.env.DREAMS_DOG_KEYS = "not json"; expect(dogs()).toBeNull();
+    process.env.DREAMS_DOG_KEYS = JSON.stringify({ mochi: { key: "0x12" }, scout: { key: "0x12" }, bolt: { key: "0x12" } }); expect(dogs()).toBeNull();
+    delete process.env.DREAMS_DOG_KEYS;
+  });
+  it("derives three different addresses, and a paid request without a signature gets a 402 with the price", async () => {
+    process.env.DREAMS_DOG_KEYS = keys;
+    const { dogs, requirePayment, PRICE } = await import("@/lib/dreams/nano");
+    const d = dogs()!; expect(new Set([d.mochi.address, d.scout.address, d.bolt.address]).size).toBe(3);
+    const r = await requirePayment(new Request("https://x.test/api/dreams/dog/scout", { method: "POST" }), "scout");
+    expect(r).toBeInstanceOf(Response); const res = r as Response; expect(res.status).toBe(402);
+    const hdr = JSON.parse(Buffer.from(res.headers.get("payment-required")!, "base64").toString());
+    expect(hdr.accepts[0]).toMatchObject({ scheme: "exact", amount: String(PRICE.scout.micro), payTo: d.scout.address, network: "eip155:5042" });
+    expect(hdr.accepts[0].extra.name).toBe("GatewayWalletBatched");
+    delete process.env.DREAMS_DOG_KEYS;
+  });
+  it("a garbled payment signature is refused, not trusted", async () => {
+    process.env.DREAMS_DOG_KEYS = keys;
+    const { requirePayment } = await import("@/lib/dreams/nano");
+    const r = await requirePayment(new Request("https://x.test/x", { method: "POST", headers: { "payment-signature": "@@@" } }), "bolt") as Response;
+    expect(r.status).toBe(402);
+    delete process.env.DREAMS_DOG_KEYS;
+  });
+  it("a failed nanopayment never blocks the dream: the work still finishes and the failure is recorded", async () => {
+    process.env.DREAMS_DOG_KEYS = keys;
+    const { advance, getDream, view } = await import("@/lib/dreams/store");
+    const { payments } = await import("@/lib/dreams/nano");
+    await db().execute("DELETE FROM dreams"); await db().execute("DELETE FROM dream_payments");
+    await db().execute({ sql: "INSERT INTO dreams(id,wallet,idea,status,created_at,updated_at) VALUES('d9','0xabc','a tip jar for creators','paid',1,1)" });
+    const origin = "http://127.0.0.1:9"; // nothing listens here, so every payment fails fast
+    let d = await advance((await getDream("d9", "0xabc"))!, undefined, origin);
+    d = await advance((await getDream("d9", "0xabc"))!, Object.fromEntries(d.questions.map((q) => [q.id, { optionIds: q.multi ? ["a", "b"] : ["a"] }])), origin);
+    expect(d.status).toBe("planned");
+    d = await advance((await getDream("d9", "0xabc"))!, undefined, origin);
+    expect(d.status).toBe("researched"); // research done by the house after the payment failed
+    d = await advance((await getDream("d9", "0xabc"))!, { f1: { optionIds: ["a"] } }, origin);
+    expect(d.status).toBe("ready");
+    const p = await payments("d9");
+    expect(p.map((x) => [x.from, x.to, x.status])).toEqual([["mochi", "scout", "failed"], ["scout", "bolt", "failed"]]);
+    expect(view(d, p).payments).toHaveLength(2);
+    delete process.env.DREAMS_DOG_KEYS;
+  }, 60000);
+  it("is unavailable (503) when off", async () => {
+    delete process.env.DREAMS_DOG_KEYS;
+    const { requirePayment } = await import("@/lib/dreams/nano");
+    expect(((await requirePayment(new Request("https://x.test/x", { method: "POST" }), "scout")) as Response).status).toBe(503);
+  });
+});

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, ChangeEvent } from "react";
+import { DreamsBanner } from "@/components/DreamsBanner";
 import { upload } from "@vercel/blob/client";
 import { CRAFTS } from "@/lib/crafts";
 import { VIDEO_TYPES } from "@/lib/video";
@@ -14,7 +15,6 @@ const CHOICES = [
   { id: "work", t: "Post work", d: "Up to 3 pictures, or a short video (30s)" },
   { id: "request", t: "Post a request", d: "Describe a job you want done" },
   { id: "agreement", t: "Start an agreement", d: "Already found someone? Set the terms" },
-  { id: "dreams", t: "Arcdreams", d: "Three dogs plan your app, then build it in Arc Studio" },
 ] as const;
 
 export default function Create() {
@@ -65,21 +65,16 @@ export default function Create() {
   if (!mode) return (
     <main className="mx-auto min-h-dvh max-w-[560px]">
       <TopBar back="/social" title="Create" />
-      <Link href="/dreams" className="press rise mx-5 mt-2 block overflow-hidden rounded-[26px] hairline" aria-label="Arcdreams: three dogs plan your app, then you build it in Arc Studio">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/arcdreams-banner.webp" alt="Arcdreams: Mochi the planner, Scout the researcher and Bolt the builder" width={1200} height={621} className="block h-auto w-full" />
-      </Link>
-      <div className="flex flex-col gap-3 px-5 pt-4">
+      <DreamsBanner />
+      <div className="px-5 pt-7 text-[12px] font-medium uppercase tracking-[0.14em] text-faint">Post on Arctisans</div>
+      <div className="flex flex-col gap-3 px-5 pt-3">
         {CHOICES.map((c, i) => {
           const body = (<>
-            <span className="num text-[12px] text-faint">{String(i + 1).padStart(2, "0")}</span>
             <span className="flex-1"><span className="block text-[17px] font-medium tracking-[-0.02em]">{c.t}</span><span className="mt-1 block text-[13px] text-muted">{c.d}</span></span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-faint"><path d="M9 5l7 7-7 7" /></svg>
           </>);
           const cls = "rise press flex items-center gap-4 rounded-[24px] hairline p-5 text-left";
-          return c.id === "dreams"
-            ? <Link key={c.id} href="/dreams" className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</Link>
-            : c.id === "agreement"
+          return c.id === "agreement"
             ? <Link key={c.id} href="/hire/lena" className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</Link>
             : <button key={c.id} onClick={() => setMode(c.id)} className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</button>;
         })}

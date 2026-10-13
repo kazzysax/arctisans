@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Bot, BotStyles, BOT_LOOK } from "@/components/DreamBots";
 import { TopBar } from "@/components/ui";
 import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 
@@ -24,20 +25,6 @@ const DOGS = [
   { k: "bolt", name: "Bolt", role: "Builder", tint: "#d9f2cf", ear: "#6fa35c", say: "I pack it up and send it to your Studio." },
 ] as const;
 
-function Dog({ k, size = 64, wag = false }: { k: (typeof DOGS)[number]["k"]; size?: number; wag?: boolean }) {
-  const d = DOGS.find((x) => x.k === k)!;
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden style={wag ? { animation: "dogwag 1.6s ease-in-out infinite" } : undefined}>
-      <ellipse cx="14" cy="26" rx="9" ry="15" fill={d.ear} transform="rotate(14 14 26)" />
-      <ellipse cx="50" cy="26" rx="9" ry="15" fill={d.ear} transform="rotate(-14 50 26)" />
-      <circle cx="32" cy="34" r="21" fill={d.tint} />
-      <ellipse cx="32" cy="43" rx="10" ry="7.5" fill="#fff" opacity=".85" />
-      <circle cx="24.5" cy="31" r="2.6" fill="#0b1a29" /><circle cx="39.5" cy="31" r="2.6" fill="#0b1a29" />
-      <ellipse cx="32" cy="39" rx="3.4" ry="2.5" fill="#0b1a29" />
-      <path d="M28 44.5q4 3.2 8 0" stroke="#0b1a29" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 
 type Dk = (typeof DOGS)[number]["k"];
@@ -64,7 +51,7 @@ const balances = (stage: Stage, real: Pay[]) => {
 type Line = { dog: Dk; text: string; pay?: (typeof PAYS)[number] };
 /** What the dogs say, built from the real work so far. Nothing here calls a model. */
 function script(stage: Stage, v: V | null, busy: boolean): Line[] {
-  const L: Line[] = [{ dog: "mochi", text: "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." }];
+  const L: Line[] = [{ dog: "mochi", text: "Hi, I'm Mochi. Give me one line and we'll run a proper kickoff: specs, features and design." }];
   if (stage === "idea") return L;
   L.push({ dog: "bolt", text: "Entry is in. Budget is split between us, and I'll keep the ledger." });
   if (stage === "paying") return L;
@@ -194,30 +181,35 @@ export default function Dreams() {
         </div>
       )}
 
-      {/* The workspace room: three desks, the speaker lit, coins crossing between desks. */}
+      {/* The fun house: a lit room with the crew on cushions, the speaker in front, coins hopping between them. */}
+      <BotStyles />
       <div className="px-5 pt-4">
-        <div className="relative overflow-hidden rounded-[26px] hairline px-3 pb-3 pt-4">
-          <div className="grid grid-cols-3 gap-2">
-            {DOGS.map((d) => {
+        <div className="relative overflow-hidden rounded-[28px] px-3 pb-3 pt-4 text-white" style={{ background: "radial-gradient(110% 80% at 50% 0%, #2c2f5e 0%, #17182e 50%, #0c0c16 100%)" }}>
+          <div aria-hidden className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,.5) 1px, transparent 1.4px)", backgroundSize: "24px 24px", maskImage: "linear-gradient(180deg, rgba(0,0,0,.3), transparent 55%)", WebkitMaskImage: "linear-gradient(180deg, rgba(0,0,0,.3), transparent 55%)" }} />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[96px] bottom-0" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.05))", borderTop: "1px solid rgba(255,255,255,.07)" }} />
+          <div className="relative grid grid-cols-3 gap-1">
+            {DOGS.map((d, di) => {
               const on = d.k === speaker;
               return (
                 <div key={d.k} className="relative flex flex-col items-center">
-                  <div className={`transition-all duration-500 ${on ? "scale-105" : "opacity-60"}`} style={on && !busy ? { animation: "sniff 2.4s ease-in-out infinite" } : undefined}><Dog k={d.k} size={58} wag={on && !busy} /></div>
-                  <div className="mt-1 h-[3px] w-full rounded-full bg-[var(--line-strong)]" />
-                  <div className="mt-2 text-[13px] font-medium">{d.name}</div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{d.role}</div>
-                  <div className="num mt-1 rounded-full hairline px-2 py-0.5 text-[11px]">{settled.length ? `${net(d.k) >= 0 ? "+" : "-"}${usd(Math.abs(net(d.k)))}` : usd(stage === "idea" ? 0 : bal[d.k])}</div>
+                  <div aria-hidden className="absolute top-[8px] h-[86px] w-[86px] rounded-full transition-opacity duration-500" style={{ opacity: on ? 1 : 0, background: `radial-gradient(circle, ${BOT_LOOK[d.k].body}55, transparent 68%)` }} />
+                  <div className={`relative transition-all duration-500 ${on ? "scale-110" : "scale-95 opacity-70"}`}><Bot k={d.k} size={78} talking={on && busy} delay={di * 400} /></div>
+                  <div aria-hidden className="-mt-2 h-[8px] w-[56px] rounded-[50%]" style={{ background: on ? BOT_LOOK[d.k].shade : "rgba(255,255,255,.14)", opacity: on ? 0.55 : 1, filter: "blur(1px)" }} />
+                  <div className="mt-2 text-[13px] font-semibold">{d.name}</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-white/45">{d.role}</div>
+                  <div className="num mt-1.5 rounded-full bg-white/10 px-2 py-0.5 text-[11px]">{settled.length ? `${net(d.k) >= 0 ? "+" : "-"}${usd(Math.abs(net(d.k)))}` : usd(stage === "idea" ? 0 : bal[d.k])}</div>
                 </div>
               );
             })}
           </div>
           {lastPay && (() => {
             const i = DOGS.findIndex((d) => d.k === lastPay.from), j = DOGS.findIndex((d) => d.k === lastPay.to);
-            return <span key={lastPay.from + stage} aria-hidden className="num pointer-events-none absolute top-[84px] rounded-full bg-[var(--fg)] px-2 py-0.5 text-[11px] text-[var(--bg)]" style={{ left: `calc(${(i + 0.5) * 33.33}% - 22px)`, ["--dx" as string]: `${(j - i) * 33.33 * 4.6}px`, animation: "coin 1.6s ease-in-out both" }}>{usd(lastPay.amt)}</span>;
+            return <span key={lastPay.from + stage} aria-hidden className="num pointer-events-none absolute top-[70px] z-10 rounded-full bg-[#ffd84d] px-2 py-0.5 text-[11px] font-semibold text-black shadow-[0_6px_16px_rgba(255,216,77,.35)]" style={{ left: `calc(${(i + 0.5) * 33.33}% - 22px)`, ["--dx" as string]: `${(j - i) * 33.33 * 4.6}px`, animation: "coin 1.6s ease-in-out both" }}>{usd(lastPay.amt)}</span>;
           })()}
-          <div key={stage + last.text} className="mt-3 rounded-[18px] hairline p-3.5" style={{ animation: "say 380ms var(--ease-out) both" }}>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-faint">{DOGS.find((d) => d.k === last.dog)!.name}{last.pay ? ` · paid ${usd(last.pay.amt)} ${last.pay.why}` : ""}</div>
-            <div className="mt-1 text-[15px] leading-snug">{stage === "idea" ? "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." : last.text}</div>
+          <div key={stage + last.text} className="relative mt-4 rounded-[18px] bg-white p-3.5 text-black" style={{ animation: "say 380ms var(--ease-out) both" }}>
+            <span aria-hidden className="absolute -top-[7px] h-[14px] w-[14px] rotate-45 bg-white" style={{ left: `calc(${(DOGS.findIndex((x) => x.k === last.dog) + 0.5) * 33.33}% - 7px)` }} />
+            <div className="text-[11px] uppercase tracking-[0.14em] text-black/45">{DOGS.find((d) => d.k === last.dog)!.name}{last.pay ? ` · paid ${usd(last.pay.amt)} ${last.pay.why}` : ""}</div>
+            <div className="mt-1 text-[15px] leading-snug">{stage === "idea" ? "Hi, I'm Mochi. Give me one line and we'll run a proper kickoff: specs, features and design." : last.text}</div>
           </div>
         </div>
         {v?.tab && stage !== "idea" && (
@@ -286,7 +278,7 @@ export default function Dreams() {
         <div className="rise px-5 pt-4">
           {sheet && (
             <div className="rounded-[24px] hairline p-5">
-              <div className="flex items-center gap-3"><Dog k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Runs in your own Arc Studio, on your account</div></div></div>
+              <div className="flex items-center gap-3"><Bot k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Runs in your own Arc Studio, on your account</div></div></div>
               <ol className="mt-4 space-y-2 text-[14px] leading-relaxed text-muted">
                 <li><span className="num text-fg">1.</span> Install Studio once: <code className="text-fg">npm i -g @circle-fin/arc-studio-cli</code> and run <code className="text-fg">arc-studio login</code>.</li>
                 <li><span className="num text-fg">2.</span> Save the sheet as <code className="text-fg">dream.md</code> in a folder.</li>

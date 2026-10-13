@@ -14,6 +14,7 @@ const CHOICES = [
   { id: "work", t: "Post work", d: "Up to 3 pictures, or a short video (30s)" },
   { id: "request", t: "Post a request", d: "Describe a job you want done" },
   { id: "agreement", t: "Start an agreement", d: "Already found someone? Set the terms" },
+  { id: "dreams", t: "Arcdreams", d: "Three dogs plan your app, then build it in Arc Studio" },
 ] as const;
 
 export default function Create() {
@@ -72,7 +73,9 @@ export default function Create() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-faint"><path d="M9 5l7 7-7 7" /></svg>
           </>);
           const cls = "rise press flex items-center gap-4 rounded-[24px] hairline p-5 text-left";
-          return c.id === "agreement"
+          return c.id === "dreams"
+            ? <Link key={c.id} href="/dreams" className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</Link>
+            : c.id === "agreement"
             ? <Link key={c.id} href="/hire/lena" className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</Link>
             : <button key={c.id} onClick={() => setMode(c.id)} className={cls} style={{ animationDelay: `${i * 70}ms` }}>{body}</button>;
         })}

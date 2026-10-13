@@ -1,6 +1,6 @@
 // Which chrome each route gets. One place, so phone tab bar / laptop rail / right panel never disagree.
 const BARE = [/^\/$/, /^\/signup/, /^\/welcome/, /^\/setup/];
-const NO_TABS = [/^\/hire\//, /^\/create/, /^\/jobs\/[^/]+/, /^\/agents\/new/, /^\/p\//, /^\/requests\//, /^\/settings\/verify/];
+const NO_TABS = [/^\/hire\//, /^\/create/, /^\/dreams/, /^\/jobs\/[^/]+/, /^\/agents\/new/, /^\/p\//, /^\/requests\//, /^\/settings\/verify/];
 const ASIDE = [/^\/discover/, /^\/social/, /^\/search/, /^\/jobs$/, /^\/notifications/, /^\/u\//, /^\/requests/, /^\/p\//];
 
 export const isBare = (p: string) => BARE.some((r) => r.test(p));

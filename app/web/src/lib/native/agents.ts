@@ -57,4 +57,7 @@ export const NATIVE: NativeDef[] = [
   },
 ];
 
+/** What one agent pays another per call through Circle Nanopayments (USDC micro-units). Far below the $0.10 escrow job price: this is machine-to-machine work. */
+export const NANO_PRICE: Record<string, number> = { portrait: 10_000, cvdoctor: 10_000, brief: 10_000, wordsmith: 10_000, checker: 10_000 };
+
 export const nativeByHandle = (h: string) => NATIVE.find((a) => a.handle === h);

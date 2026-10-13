@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS dream_payments (
   status TEXT NOT NULL, tx TEXT, error TEXT, network TEXT NOT NULL, created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS dream_payments_dream ON dream_payments(dream_id, created_at);
+CREATE TABLE IF NOT EXISTS native_nano (
+  id TEXT PRIMARY KEY, job_id TEXT NOT NULL, from_handle TEXT NOT NULL, to_handle TEXT NOT NULL, amount_micro INTEGER NOT NULL,
+  result TEXT NOT NULL, tx TEXT, network TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(job_id, to_handle)
+);
 `;
 
 let migrated = false;

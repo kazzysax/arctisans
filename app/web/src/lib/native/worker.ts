@@ -10,6 +10,7 @@ import { buildJobCalls, type ActInput } from "../jobactions";
 import { TermsSchema, hashTerms, defaultSplit, totalOf, type Terms } from "../terms";
 import { proposeCalls, type Call } from "../tx";
 import { NATIVE, nativeByHandle, type NativeDef } from "./agents";
+import { nativeNanoOn, nanoHire } from "./nano";
 import { chat, image } from "./llm";
 
 type Agent = NativeDef & { account: PrivateKeyAccount; wallet: string };
@@ -100,6 +101,14 @@ async function makeImage(a: Agent, prompt: string) {
   return url;
 }
 
+/** The work one agent does when another agent hires it over nanopayments. The same work as an escrow job, on a plain ask. */
+export async function helperWork(handle: string, ask: string): Promise<string> {
+  const a = nativeAgents().find((x) => x.handle === handle);
+  if (!a) throw new Error("unknown agent");
+  if (handle === "portrait") return `Here is your picture: ${await makeImage(a, ask)}`;
+  return chat(a.system || `You are ${a.name} on Arctisans (${a.title}). ${a.bio} Reply in plain text.`, ask, 1000);
+}
+
 /** Do the work for a funded, started job. Returns the delivery text, or null when waiting on a sub-hire. */
 async function doWork(a: Agent, j: Row, all: Agent[]): Promise<string | null> {
   const req = await request(j);
@@ -109,7 +118,16 @@ async function doWork(a: Agent, j: Row, all: Agent[]): Promise<string | null> {
     const clientRow = (await db().execute({ sql: "SELECT avatar, display_name, title, bio, skills FROM users WHERE wallet=?", args: [lc(j.client)] })).rows[0];
     const needed = helper && helper.wallet !== lc(j.client) && (a.hires.when === "always" || !clientRow?.avatar);
     if (needed) {
-      const sub = await subHire(a, helper!, j, `${a.hires.ask}.\n\n${req}${clientRow ? `\nAbout the client: ${clientRow.display_name}, ${clientRow.title ?? ""}. ${clientRow.bio ?? ""}` : ""}`);
+      const ask = `${a.hires.ask}.\n\n${req}${clientRow ? `\nAbout the client: ${clientRow.display_name}, ${clientRow.title ?? ""}. ${clientRow.bio ?? ""}` : ""}`;
+      let sub: string | null = null;
+      if (nativeNanoOn()) {
+        try {
+          const r = await nanoHire(JSON.parse(process.env.NATIVE_AGENT_KEYS ?? "{}")[a.handle] as `0x${string}`, a.handle, helper!.handle, String(j.id), ask);
+          if (r.fresh) await message(String(j.id), a.wallet, lc(j.client), `I paid @${helper!.handle} $${(r.micro / 1e6).toFixed(2)} through Circle Nanopayments for part of this job${r.tx ? ` (${r.tx.slice(0, 10)}…)` : ""}.`);
+          sub = r.text;
+        } catch (e) { say(`@${a.handle} nanopayment to @${helper!.handle} failed, using escrow: ${(e as Error).message.slice(0, 100)}`); }
+      }
+      if (sub === null) sub = await subHire(a, helper!, j, ask);
       if (sub === null) return null; // still in progress
       extra = sub;
     }

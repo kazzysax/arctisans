@@ -159,6 +159,7 @@ export default function Dreams() {
   const real = v?.payments ?? [];
   const settled = real.filter((p) => p.status === "paid");
   const bal = balances(stage, real);
+  const net = (k: Dk) => settled.reduce((n, p) => n + (p.to === k ? p.micro : 0) - (p.from === k ? p.micro : 0), 0) / 1e6;
   const lastPay = [...lines].reverse().find((l) => l.pay)?.pay;
   const s = stepOf(stage);
   const sections = stage === "asking" ? SECTIONS.filter(([k]) => qs.some((q) => q.section === k)) : [];
@@ -192,7 +193,7 @@ export default function Dreams() {
                   <div className="mt-1 h-[3px] w-full rounded-full bg-[var(--line-strong)]" />
                   <div className="mt-2 text-[13px] font-medium">{d.name}</div>
                   <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{d.role}</div>
-                  <div className="num mt-1 rounded-full hairline px-2 py-0.5 text-[11px]">{usd(stage === "idea" ? 0 : bal[d.k])}</div>
+                  <div className="num mt-1 rounded-full hairline px-2 py-0.5 text-[11px]">{settled.length ? `${net(d.k) >= 0 ? "+" : "-"}${usd(Math.abs(net(d.k)))}` : usd(stage === "idea" ? 0 : bal[d.k])}</div>
                 </div>
               );
             })}

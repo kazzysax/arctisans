@@ -6,8 +6,12 @@ import { sendCalls, circleReady, type Call } from "@/lib/walletClient";
 type Opt = { id: string; label: string };
 type Q = { id: string; section: string; text: string; multi: boolean; options: Opt[] };
 type Pay = { id: string; from: string; to: string; micro: number; status: "paid" | "failed"; tx: string | null; why: string };
+type TabV = { deposited: number; spent: number; withdrawn: number; left: number };
 type V = {
   payments: Pay[];
+  tab: TabV | null;
+  usesTab: boolean;
+  withdraw: Call | null;
   id: string; idea: string; status: string; questions: Q[]; followups: Q[]; ready: boolean; skills: string[]; callsLeft: number;
   plan: null | { name: string; oneLiner: string; audience: string; roles: string[]; mustHave: string[]; later: string[]; acceptance: string[]; vibe: string; screens: string[]; rules: string[]; mustNot: string[] };
   research: null | { stack: { layer: string; choice: string; why: string }[]; architecture: string; dataModel: string[]; integrations: { name: string; why: string }[]; arcPieces: { piece: string; why: string }[]; studioCovers: string[]; outsideStudio: string[]; milestones: string[]; risks: string[]; similar: { name: string; lesson: string }[]; skills: string[]; sources: string[] };
@@ -144,6 +148,15 @@ export default function Dreams() {
     }
     throw new Error("The payment is still settling. Open the arena again in a minute.");
   }
+  async function withdraw() {
+    if (!v?.withdraw) return;
+    setErr(null); setBusy(true);
+    try {
+      const h = await sendCalls([v.withdraw]);
+      if (!h) throw new Error("The withdrawal did not go through.");
+      for (let i = 0; i < 6; i++) { const x = await api(`/api/dreams/${v.id}`); setV(x); if (x.tab && x.tab.left === 0) break; await new Promise((r) => setTimeout(r, 2000)); }
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
   const copy = (k: string, t: string) => { void navigator.clipboard.writeText(t); setCopied(k); setTimeout(() => setCopied(null), 1600); };
   const reset = () => { localStorage.removeItem("dream:id"); setV(null); setSheet(null); setIdea(""); setStage("idea"); setErr(null); setReport(false); };
   const toggle = (q: Q, id: string) => setPick((p) => {
@@ -207,6 +220,15 @@ export default function Dreams() {
             <div className="mt-1 text-[15px] leading-snug">{stage === "idea" ? "Hi, I'm Mochi. Give me one line and I'll run a proper kickoff: specs, features and design." : last.text}</div>
           </div>
         </div>
+        {v?.tab && stage !== "idea" && (
+          <div className="mt-3 flex items-center justify-between rounded-[18px] hairline px-4 py-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-faint">Your tab</div>
+              <div className="num mt-0.5 text-[15px]">Spent {usd(v.tab.spent / 1e6)} · {v.tab.left > 0 ? `${usd(v.tab.left / 1e6)} left` : v.tab.withdrawn > 0 ? `${usd(v.tab.withdrawn / 1e6)} returned to you` : "used up"}</div>
+            </div>
+            {v.tab.left > 0 && <button disabled={busy} onClick={withdraw} className="btn btn-ghost !px-4 !py-2 text-[13px]">{stage === "done" ? "Get my refund" : "Withdraw"}</button>}
+          </div>
+        )}
         {stage !== "idea" && (
           <p className="mt-2 text-[12px] text-faint">
             {settled.length ? `${settled.length} payment${settled.length === 1 ? "" : "s"} settled on Arc through Circle Nanopayments` : real.length ? "A payment did not settle, so the dogs worked on the house." : "Practice ledger: shows how the budget is shared."}
@@ -228,12 +250,12 @@ export default function Dreams() {
         <div className="rise px-5 pt-5">
           <textarea value={idea} onChange={(e) => setIdea(e.target.value.slice(0, 280))} rows={3} placeholder="e.g. A tip jar where fans tip a creator in USDC and see a leaderboard" className="field w-full resize-none" />
           <div className="mt-1 flex justify-between text-[12px] text-faint"><span>{idea.trim().length < 12 ? "A few more words" : "Good"}</span><span>{idea.length}/280</span></div>
-          <button disabled={idea.trim().length < 12 || busy} onClick={begin} className="btn btn-solid mt-6 w-full">{busy ? "Opening the gate…" : "Enter the arena · $1 USDC"}</button>
-          <p className="mt-3 text-center text-[12px] leading-relaxed text-faint">The $1 pays for the dogs&apos; planning and research. Your build then runs in your own Arc Studio, on testnet.</p>
+          <button disabled={idea.trim().length < 12 || busy} onClick={begin} className="btn btn-solid mt-6 w-full">{busy ? "Opening the gate…" : "Open a $1 tab"}</button>
+          <p className="mt-3 text-center text-[12px] leading-relaxed text-faint">You put $1 on a tab. Each step takes only what it costs, and you can withdraw the rest at any time. Your build then runs in your own Arc Studio, on testnet.</p>
         </div>
       )}
 
-      {stage === "paying" && !hash && !busy && v?.status === "new" && <p className="px-5 pt-5 text-center text-[13px] text-muted">Approve the $1 in your wallet window.</p>}
+      {stage === "paying" && !hash && !busy && v?.status === "new" && <p className="px-5 pt-5 text-center text-[13px] text-muted">Approve the $1 deposit in your wallet window.</p>}
 
       {(stage === "asking" || stage === "follow") && qs.length > 0 && (
         <div className="px-5 pt-4">

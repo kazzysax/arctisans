@@ -6,19 +6,20 @@ import { erc20Abi } from "@/lib/abi_ext";
 import { ENTRY_MICRO, MAX_CALLS, buildSheet, checkAnswer, Question, PlanCard, ResearchCard, type Answers } from "./core";
 import { mochiQuestions, mochiPlan, scoutResearch } from "./llm";
 import { nanoOn, payDog, payments } from "./nano";
+import { chargeStep, verifyDeposit, readTab, tabOn, withdrawCall, type Step } from "./tab";
 
 /** Where the $1 goes: the Arctisans official account, unless DREAMS_TREASURY says otherwise. */
 export const treasury = () => (process.env.DREAMS_TREASURY ?? "0x3edfd25cc190023eb62c4bec6a3d821f5339a189").toLowerCase();
 
 export type Row = {
   id: string; wallet: string; idea: string; status: "new" | "paid" | "asking" | "planned" | "researched" | "ready";
-  questions: Question[]; answers: Answers; plan: PlanCard | null; research: ResearchCard | null; sheet: string | null; skills: string[]; calls: number;
+  questions: Question[]; answers: Answers; plan: PlanCard | null; research: ResearchCard | null; sheet: string | null; skills: string[]; calls: number; tab: boolean;
 };
 const J = <T,>(v: unknown, d: T): T => { try { return v ? (JSON.parse(String(v)) as T) : d; } catch { return d; } };
 const toRow = (r: Record<string, unknown>): Row => ({
   id: String(r.id), wallet: String(r.wallet), idea: String(r.idea), status: String(r.status) as Row["status"],
   questions: J(r.questions, []), answers: J(r.answers, {}), plan: J(r.plan, null), research: J(r.research, null),
-  sheet: r.sheet ? String(r.sheet) : null, skills: J(r.skills, []), calls: Number(r.calls),
+  sheet: r.sheet ? String(r.sheet) : null, skills: J(r.skills, []), calls: Number(r.calls), tab: Number(r.tab ?? 0) === 1,
 });
 
 /** For the paid dog endpoints, which are called by the other dog and have no user session. The dream id is a random UUID the server itself sent. */
@@ -34,7 +35,8 @@ const save = (id: string, set: string, args: unknown[]) =>
   db().execute({ sql: `UPDATE dreams SET ${set}, updated_at=? WHERE id=?`, args: [...args, Date.now(), id] as never });
 
 /** Reads the receipt and checks a real USDC transfer of at least $1 from this wallet to the treasury. */
-export async function verifyEntry(hash: `0x${string}`, wallet: string): Promise<boolean> {
+export async function verifyEntry(hash: `0x${string}`, wallet: string, dream?: { id: string; tab: boolean }): Promise<boolean> {
+  if (dream?.tab) return verifyDeposit(hash, wallet, dream.id, ENTRY_MICRO);
   const rcpt = await client().getTransactionReceipt({ hash }).catch(() => null);
   if (!rcpt || rcpt.status !== "success") return false;
   const logs = parseEventLogs({ abi: erc20Abi, eventName: "Transfer", logs: rcpt.logs.filter((l) => l.address.toLowerCase() === USDC.toLowerCase()) });
@@ -45,9 +47,12 @@ export async function markPaid(id: string, wallet: string, hash: string): Promis
   const d = await getDream(id, wallet);
   if (!d) return "missing";
   if (d.status !== "new") return "ok"; // already paid: safe to call twice
-  try { await save(id, "status='paid', entry_tx=?", [hash.toLowerCase()]); } catch { return "used"; } // same receipt can't pay for two dreams
+  try { await save(id, d.tab ? "status='paid', entry_tx=?" : "status='paid', entry_tx=?", [hash.toLowerCase()]); } catch { return "used"; } // same receipt can't pay for two dreams
   return "ok";
 }
+
+/** Tab dreams pay for each step up front, from the user's own deposit. Older dreams (paid by transfer) skip this. */
+const charge = (d: Row, step: Step) => (d.tab ? chargeStep(d.id, step) : Promise.resolve());
 
 const spend = (d: Row, n = 1) => { if (d.calls + n > MAX_CALLS) throw new Error("Over the limit of dog calls for one dream."); };
 
@@ -86,19 +91,20 @@ export async function doCompile(id: string, follow: Answers): Promise<Row> {
 export async function advance(d: Row, got?: Record<string, { optionIds: string[] }>, origin?: string): Promise<Row> {
   if (d.status === "new") throw new Error("Only paid dreams can start");
   if (d.status === "paid") {
-    spend(d);
+    spend(d); await charge(d, "questions");
     const qs = await mochiQuestions(d.idea);
     await save(d.id, "status='asking', questions=?, calls=calls+1", [JSON.stringify(qs)]);
     return { ...d, status: "asking", questions: qs, calls: d.calls + 1 };
   }
   if (d.status === "asking") {
     const clean = collect(d.questions, got);
-    spend(d);
+    spend(d); await charge(d, "plan");
     const plan = await mochiPlan(d.idea, clean);
     await save(d.id, "status='planned', answers=?, plan=?, calls=calls+1", [JSON.stringify(clean), JSON.stringify(plan)]);
     return { ...d, status: "planned", answers: clean, plan, calls: d.calls + 1 };
   }
   if (d.status === "planned") {
+    await charge(d, "research");
     // Mochi pays Scout through Circle Nanopayments, and Scout does the work when the payment lands. Any failure falls back to doing it here.
     if (origin && nanoOn()) {
       try { await payDog(d.id, "scout", `${origin}/api/dreams/dog/scout`); } catch (e) { console.error("[dreams] scout payment failed, working without it:", (e as Error).message); }
@@ -109,6 +115,7 @@ export async function advance(d: Row, got?: Record<string, { optionIds: string[]
   }
   if (d.status === "researched") {
     const follow = collect(d.research!.followups, got);
+    await charge(d, "compile");
     if (origin && nanoOn()) {
       try { await payDog(d.id, "bolt", `${origin}/api/dreams/dog/bolt`); } catch (e) { console.error("[dreams] bolt payment failed, working without it:", (e as Error).message); }
     }
@@ -118,11 +125,13 @@ export async function advance(d: Row, got?: Record<string, { optionIds: string[]
 }
 
 /** What the browser may see: never the raw sheet before it is ready. */
-export const view = (d: Row, pays: Awaited<ReturnType<typeof payments>> = []) => ({
-  payments: pays,
+export const view = (d: Row, pays: Awaited<ReturnType<typeof payments>> = [], tab: Awaited<ReturnType<typeof readTab>> = null) => ({
+  payments: pays, tab: d.tab ? tab : null, usesTab: d.tab, withdraw: d.tab ? withdrawCall(d.id) : null,
   id: d.id, idea: d.idea, status: d.status,
   questions: d.status === "asking" ? d.questions : [],
   followups: d.status === "researched" ? d.research!.followups : [],
   plan: d.plan, research: d.research ? Object.fromEntries(Object.entries(d.research).filter(([k]) => k !== "followups")) : null,
   ready: d.status === "ready", skills: d.skills, callsLeft: Math.max(0, MAX_CALLS - d.calls),
 });
+
+export { tabOn };

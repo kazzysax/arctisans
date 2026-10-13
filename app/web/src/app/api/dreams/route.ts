@@ -4,6 +4,7 @@ import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { cleanIdea, BLOCKED } from "@/lib/dreams/core";
 import { treasury } from "@/lib/dreams/store";
+import { tabOn, depositCalls } from "@/lib/dreams/tab";
 import { USDC } from "@/lib/chain";
 import { encodeFunctionData } from "viem";
 import { erc20Abi } from "@/lib/abi_ext";
@@ -19,7 +20,9 @@ export const POST = route("dream-new", 10, async (req) => {
   const open = await db().execute({ sql: "SELECT COUNT(*) n FROM dreams WHERE wallet=? AND status='new' AND created_at>?", args: [wallet, Date.now() - 3_600_000] });
   if (Number(open.rows[0].n) >= 3) return fail(429, "You have 3 unpaid dreams waiting. Pay one first.");
   const id = crypto.randomUUID();
-  await db().execute({ sql: "INSERT INTO dreams(id,wallet,idea,created_at,updated_at) VALUES(?,?,?,?,?)", args: [id, wallet, idea, Date.now(), Date.now()] });
+  const tab = tabOn();
+  await db().execute({ sql: "INSERT INTO dreams(id,wallet,idea,tab,created_at,updated_at) VALUES(?,?,?,?,?,?)", args: [id, wallet, idea, tab ? 1 : 0, Date.now(), Date.now()] });
+  if (tab) return ok({ id, calls: depositCalls(id, ENTRY_MICRO) });
   const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [treasury() as `0x${string}`, BigInt(ENTRY_MICRO)] });
   return ok({ id, calls: [{ to: USDC, data, label: "Enter the arena ($1 USDC)" }] });
 });

@@ -3,6 +3,7 @@ import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { getDream, markPaid, verifyEntry, advance, view } from "@/lib/dreams/store";
 import { payments } from "@/lib/dreams/nano";
+import { readTab, TabError } from "@/lib/dreams/tab";
 
 export const maxDuration = 60;
 const idOf = (req: Request) => new URL(req.url).pathname.split("/").filter(Boolean).at(-1)!;
@@ -10,7 +11,7 @@ const idOf = (req: Request) => new URL(req.url).pathname.split("/").filter(Boole
 export const GET = route("dream-get", 120, async (req) => {
   const { wallet } = requireSession(req);
   const d = await getDream(idOf(req), wallet);
-  return d ? ok(view(d, await payments(d.id))) : fail(404, "Not found");
+  return d ? ok(view(d, await payments(d.id), d.tab ? await readTab(d.id) : null)) : fail(404, "Not found");
 });
 
 const B = z.object({
@@ -27,17 +28,18 @@ export const POST = route("dream-step", 20, async (req) => {
   if (!d) return fail(404, "Not found");
   if (d.status === "new") {
     if (!b.hash) return fail(402, "Pay the $1 to enter the arena");
-    if (!(await verifyEntry(b.hash as `0x${string}`, wallet))) return fail(409, "That payment has not landed yet. Try again in a few seconds.");
+    if (!(await verifyEntry(b.hash as `0x${string}`, wallet, d))) return fail(409, "That payment has not landed yet. Try again in a few seconds.");
     const m = await markPaid(id, wallet, b.hash);
     if (m === "used") return fail(409, "That payment was already used for another dream.");
     d = (await getDream(id, wallet))!;
   }
   try {
     const next = await advance(d, b.answers, new URL(req.url).origin);
-    return ok(view(next, await payments(next.id)));
+    return ok(view(next, await payments(next.id), next.tab ? await readTab(next.id) : null));
   } catch (e) {
     const m = (e as Error).message;
     if (/^(Only|Over)/.test(m)) return fail(400, m);
+    if (e instanceof TabError) return fail(e.code === "empty" ? 402 : 502, m);
     console.error("[dream-step]", m);
     return fail(502, "The dogs lost the scent. Nothing was used, try that again.");
   }

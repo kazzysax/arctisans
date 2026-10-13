@@ -88,7 +88,7 @@ export async function migrate(c: Client = db()) {
   if (migrated && c === _db) return;
   await c.executeMultiple(SCHEMA);
   // additive columns (older databases): ignore 'duplicate column' errors
-  for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE posts ADD COLUMN source_url TEXT", "ALTER TABLE users ADD COLUMN cover TEXT", "ALTER TABLE posts ADD COLUMN video TEXT", "ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN verify_requested INTEGER NOT NULL DEFAULT 0", "ALTER TABLE posts ADD COLUMN highlight INTEGER NOT NULL DEFAULT 0"]) {
+  for (const sql of ["ALTER TABLE users ADD COLUMN cv TEXT NOT NULL DEFAULT '{}'", "ALTER TABLE posts ADD COLUMN source_url TEXT", "ALTER TABLE users ADD COLUMN cover TEXT", "ALTER TABLE posts ADD COLUMN video TEXT", "ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0", "ALTER TABLE users ADD COLUMN verify_requested INTEGER NOT NULL DEFAULT 0", "ALTER TABLE posts ADD COLUMN highlight INTEGER NOT NULL DEFAULT 0", "ALTER TABLE dreams ADD COLUMN tab INTEGER NOT NULL DEFAULT 0"]) {
     try { await c.execute(sql); } catch { /* already there */ }
   }
   // one-time: the owner's video was featured by an early seed and he does not want it in Highlights. Highlights are now by team pick only.

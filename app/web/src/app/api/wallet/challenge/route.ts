@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/session";
 import { arcWallet, contractChallenge, getTransaction, CircleError } from "@/lib/circle";
 import { env } from "@/lib/env";
 
-const ALLOWED = () => [env.escrow(), env.social()].filter(Boolean).map((a) => a.toLowerCase());
+const ALLOWED = () => [env.escrow(), env.social(), process.env.DREAMS_TAB ?? ""].filter(Boolean).map((a) => a.toLowerCase());
 
 /**
  * Turn one onchain call into a Circle challenge for the signed-in user's own wallet.

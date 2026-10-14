@@ -8,6 +8,7 @@ import { processImages, storeImage, MAX_IMAGES } from "@/lib/images";
 import { publishCalls } from "@/lib/tx";
 import { isOurVideo } from "@/lib/video";
 import { pollSoon } from "@/lib/xlink";
+import { maybeReward } from "@/lib/rewards";
 
 export const maxDuration = 60;
 
@@ -67,5 +68,6 @@ export const POST = route("post-create", 20, async (req) => {
     sql: "INSERT INTO posts(id,author_wallet,feed,body,images,video,skill,city,hash,budget,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
     args: [id, wallet, feed, meta.body, JSON.stringify(refs), video, meta.skill?.toLowerCase() ?? null, meta.city ?? null, postHash, meta.budget ?? null, Date.now()],
   });
+  await maybeReward(wallet, id).catch(() => {}); // launch gift; never blocks or changes the post
   return ok({ id, hash: postHash, anchor: feed === "work" ? publishCalls(postHash, refs[0] ?? video ?? "") : [] }, 201);
 });

@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, n INTEGER NOT NULL, 
 -- people ask the team to feature (kind='highlight') or remove (kind='delete') one of their own posts
 CREATE TABLE IF NOT EXISTS post_requests (id TEXT PRIMARY KEY, post_id TEXT NOT NULL, wallet TEXT NOT NULL, kind TEXT NOT NULL, note TEXT, status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS post_req_status ON post_requests(status, created_at);
+CREATE TABLE IF NOT EXISTS rewards (wallet TEXT PRIMARY KEY, post_id TEXT NOT NULL, tx TEXT, status TEXT NOT NULL, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS dreams (
   id TEXT PRIMARY KEY, wallet TEXT NOT NULL, idea TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
   entry_tx TEXT UNIQUE, questions TEXT NOT NULL DEFAULT '[]', answers TEXT NOT NULL DEFAULT '{}',

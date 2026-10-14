@@ -81,6 +81,61 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 const Bullets = ({ items }: { items: string[] }) => <ul className="mt-1.5 text-[14px] leading-relaxed">{items.map((x) => <li key={x} className="mb-0.5">· {x}</li>)}</ul>;
 
+/** Hand-off to the user's own Arc Studio from inside the page: open Studio, copy the token it shows, paste, send. Nothing to install. */
+function StudioSend({ dreamId, sheet, copied, copy }: { dreamId: string; sheet: { sheet: string; command: string }; copied: string | null; copy: (k: string, t: string) => void }) {
+  const [info, setInfo] = useState<{ loginUrl: string; sent: boolean; webUrl: string | null } | null>(null);
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [build, setBuild] = useState<{ state: "building" | "done" | "stopped"; webUrl: string } | null>(null);
+  const [adv, setAdv] = useState(false);
+  useEffect(() => { api(`/api/dreams/${dreamId}/studio`).then((x) => { setInfo(x); if (x.sent) setBuild({ state: "building", webUrl: x.webUrl }); }).catch(() => {}); }, [dreamId]);
+  const ok = /^origin_pat_[A-Za-z0-9._-]{10,}$/.test(token.trim());
+  async function send(action: "send" | "status") {
+    setErr(null); setBusy(true);
+    try {
+      const x = await api(`/api/dreams/${dreamId}/studio`, { action, token: token.trim() });
+      setBuild({ state: x.state, webUrl: x.webUrl });
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
+  return (
+    <div className="rounded-[24px] hairline p-5">
+      <div className="flex items-center gap-3"><Bot k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Sent to your own Arc Studio account</div></div></div>
+      {build ? (
+        <div className="mt-4">
+          <div className="text-[15px] font-medium">{build.state === "done" ? "Your app is built" : build.state === "stopped" ? "The build stopped" : "Studio is building your app"}</div>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted">{build.state === "done" ? "Open it in Studio to see the preview, the code and the deployed contract." : build.state === "stopped" ? "Open it in Studio to see why, and continue from there." : "This takes about 5 to 20 minutes. You can leave this page. The build keeps going in your Studio."}</p>
+          <a href={build.webUrl} target="_blank" rel="noreferrer" className="btn btn-solid mt-4 block w-full text-center">Open in Arc Studio</a>
+          {build.state === "building" && (
+            <div className="mt-3">
+              <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your Studio token to check progress" className="field w-full text-[13px]" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+              <button disabled={!ok || busy} onClick={() => void send("status")} className="btn btn-ghost mt-2 w-full">{busy ? "Checking…" : "Check progress"}</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <ol className="mt-4 space-y-3 text-[14px] leading-relaxed">
+            <li className="flex gap-3"><span className="num mt-0.5 text-faint">1</span><div className="flex-1"><div>Sign in to Arc Studio and click <b>Authorize</b>. It shows you a token.</div><a href={info?.loginUrl ?? "https://studio.arc.io/cli-auth"} target="_blank" rel="noreferrer" className="btn btn-ghost mt-2 inline-block !px-4 !py-2 text-[13px]">Open Arc Studio sign-in</a></div></li>
+            <li className="flex gap-3"><span className="num mt-0.5 text-faint">2</span><div className="flex-1"><div>Copy the token and paste it here.</div><input value={token} onChange={(e) => setToken(e.target.value)} placeholder="origin_pat_…" className="field mt-2 w-full text-[13px]" autoCapitalize="off" autoCorrect="off" spellCheck={false} />{token && !ok && <div className="mt-1 text-[12px] text-faint">Copy the whole token, it starts with origin_pat_</div>}</div></li>
+            <li className="flex gap-3"><span className="num mt-0.5 text-faint">3</span><div className="flex-1"><div>Send your Dream Sheet. Studio plans, audits, deploys and builds the app.</div><button disabled={!ok || busy} onClick={() => void send("send")} className="btn btn-solid mt-2 w-full">{busy ? "Sending to Studio…" : "Send to Arc Studio"}</button></div></li>
+          </ol>
+          {err && <p className="mt-3 text-[13px] leading-relaxed text-red-500">{err}</p>}
+          <p className="mt-3 text-[12px] leading-relaxed text-faint">Your token is used once to send the sheet. We never store it. It goes to your own Studio, so the build, its limits and its files are yours. Studio deploys to Arc testnet only.</p>
+          <button onClick={() => setAdv((a) => !a)} className="mt-3 text-[12px] text-muted underline underline-offset-4">{adv ? "Hide" : "I prefer the command line"}</button>
+          {adv && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button onClick={() => copy("sheet", sheet.sheet)} className="btn btn-ghost">{copied === "sheet" ? "Copied" : "Copy sheet"}</button>
+              <button onClick={() => copy("cmd", sheet.command)} className="btn btn-ghost">{copied === "cmd" ? "Copied" : "Copy run line"}</button>
+            </div>
+          )}
+        </>
+      )}
+      {build && err && <p className="mt-3 text-[13px] text-red-500">{err}</p>}
+    </div>
+  );
+}
+
 export default function Dreams() {
   const [stage, setStage] = useState<Stage>("idea");
   const [idea, setIdea] = useState("");
@@ -308,21 +363,7 @@ export default function Dreams() {
 
       {stage === "done" && v && (
         <div className="rise px-5 pt-4">
-          {sheet && (
-            <div className="rounded-[24px] hairline p-5">
-              <div className="flex items-center gap-3"><Bot k="bolt" size={40} /><div><div className="text-[15px] font-medium">Bolt&apos;s hand-off</div><div className="text-[12px] text-muted">Runs in your own Arc Studio, on your account</div></div></div>
-              <ol className="mt-4 space-y-2 text-[14px] leading-relaxed text-muted">
-                <li><span className="num text-fg">1.</span> Install Studio once: <code className="text-fg">npm i -g @circle-fin/arc-studio-cli</code> and run <code className="text-fg">arc-studio login</code>.</li>
-                <li><span className="num text-fg">2.</span> Save the sheet as <code className="text-fg">dream.md</code> in a folder.</li>
-                <li><span className="num text-fg">3.</span> Run the command below. Studio plans, audits, deploys, and builds the app.</li>
-              </ol>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button onClick={() => copy("sheet", sheet.sheet)} className="btn btn-solid">{copied === "sheet" ? "Copied" : "Copy sheet"}</button>
-                <button onClick={() => copy("cmd", sheet.command)} className="btn btn-ghost">{copied === "cmd" ? "Copied" : "Copy run line"}</button>
-              </div>
-              <a className="mt-3 block text-center text-[13px] text-muted underline underline-offset-4" href={`data:text/markdown;charset=utf-8,${encodeURIComponent(sheet.sheet)}`} download="dream.md">Download dream.md</a>
-              <p className="mt-3 text-[12px] leading-relaxed text-faint">Studio deploys to Arc testnet only. Review everything before using real money.</p>
-            </div>)}
+          {sheet && <StudioSend dreamId={v.id} sheet={sheet} copied={copied} copy={copy} />}
 
           <button onClick={() => setReport((r) => !r)} className="btn btn-ghost mt-3 w-full">{report ? "Hide the full project report" : "Read the full project report"}</button>
           {report && v.plan && (<>

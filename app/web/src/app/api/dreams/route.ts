@@ -4,7 +4,7 @@ import { ok, fail, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
 import { cleanIdea, BLOCKED } from "@/lib/dreams/core";
 import { treasury } from "@/lib/dreams/store";
-import { tabOn, depositCalls } from "@/lib/dreams/tab";
+import { tabOn, depositCalls, readTab, withdrawCall } from "@/lib/dreams/tab";
 import { USDC } from "@/lib/chain";
 import { encodeFunctionData } from "viem";
 import { erc20Abi } from "@/lib/abi_ext";
@@ -29,6 +29,12 @@ export const POST = route("dream-new", 10, async (req) => {
 
 export const GET = route("dream-list", 60, async (req) => {
   const { wallet } = requireSession(req);
-  const r = await db().execute({ sql: "SELECT id, idea, status, created_at FROM dreams WHERE wallet=? ORDER BY created_at DESC LIMIT 20", args: [wallet] });
-  return ok({ dreams: r.rows.map((x) => ({ id: String(x.id), idea: String(x.idea), status: String(x.status), at: Number(x.created_at) })) });
+  const r = await db().execute({ sql: "SELECT id, idea, status, tab, created_at FROM dreams WHERE wallet=? ORDER BY created_at DESC LIMIT 20", args: [wallet] });
+  // Every dream with its tab, read from the contract, so money left on a finished dream can always be found and withdrawn.
+  const dreams = await Promise.all(r.rows.map(async (x) => {
+    const id = String(x.id);
+    const t = Number(x.tab) === 1 ? await readTab(id).catch(() => null) : null;
+    return { id, idea: String(x.idea), status: String(x.status), at: Number(x.created_at), tab: t, withdraw: t && t.left > 0 ? withdrawCall(id) : null };
+  }));
+  return ok({ dreams });
 });

@@ -17,6 +17,7 @@ type V = {
   plan: null | { name: string; oneLiner: string; audience: string; roles: string[]; mustHave: string[]; later: string[]; acceptance: string[]; vibe: string; screens: string[]; rules: string[]; mustNot: string[] };
   research: null | { stack: { layer: string; choice: string; why: string }[]; architecture: string; dataModel: string[]; integrations: { name: string; why: string }[]; arcPieces: { piece: string; why: string }[]; studioCovers: string[]; outsideStudio: string[]; milestones: string[]; risks: string[]; similar: { name: string; lesson: string }[]; skills: string[]; sources: string[] };
 };
+type PastDream = { id: string; idea: string; status: string; at: number; tab: TabV | null; withdraw: Call | null };
 type Stage = "idea" | "paying" | "asking" | "research" | "follow" | "done";
 
 const DOGS = [
@@ -92,6 +93,19 @@ export default function Dreams() {
   const [hash, setHash] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
   const [report, setReport] = useState(false);
+  const [past, setPast] = useState<PastDream[] | null>(null);
+  const [wd, setWd] = useState<string | null>(null);
+  const loadPast = () => api("/api/dreams").then((x: { dreams: PastDream[] }) => setPast(x.dreams)).catch(() => setPast([]));
+  useEffect(() => { void loadPast(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  async function withdrawPast(d: PastDream) {
+    if (!d.withdraw) return;
+    setErr(null); setWd(d.id);
+    try {
+      const h = await sendCalls([d.withdraw]);
+      if (!h) throw new Error("The withdrawal did not go through.");
+      for (let i = 0; i < 6; i++) { await new Promise((r) => setTimeout(r, 2000)); const x = (await api("/api/dreams")) as { dreams: PastDream[] }; setPast(x.dreams); if (x.dreams.find((q) => q.id === d.id)?.tab?.left === 0) break; }
+    } catch (e) { setErr((e as Error).message); } finally { setWd(null); }
+  }
 
   useEffect(() => { // resume an unfinished dream after a reload
     const id = localStorage.getItem("dream:id"); if (!id) return;
@@ -244,6 +258,24 @@ export default function Dreams() {
           <div className="mt-1 flex justify-between text-[12px] text-faint"><span>{idea.trim().length < 12 ? "A few more words" : "Good"}</span><span>{idea.length}/280</span></div>
           <button disabled={idea.trim().length < 12 || busy} onClick={begin} className="btn btn-solid mt-6 w-full">{busy ? "Opening the gate…" : "Open a $1 tab"}</button>
           <p className="mt-3 text-center text-[12px] leading-relaxed text-faint">You put $1 on a tab. Each step takes only what it costs, and you can withdraw the rest at any time. Your build then runs in your own Arc Studio, on testnet.</p>
+          {past && past.length > 0 && (
+            <div className="mt-8">
+              <div className="text-[12px] uppercase tracking-[0.14em] text-faint">Your dreams</div>
+              <div className="mt-2 flex flex-col gap-2">
+                {past.map((d) => (
+                  <div key={d.id} className="rounded-[18px] hairline p-3.5">
+                    <div className="line-clamp-2 text-[14px] leading-snug">{d.idea}</div>
+                    <div className="num mt-1 text-[12px] text-faint">{new Date(d.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {d.status === "ready" ? "Dream Sheet ready" : d.status === "new" ? "Not paid" : "In progress"}{d.tab ? ` · spent ${usd(d.tab.spent / 1e6)}` : ""}</div>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      {d.status !== "new" && <button onClick={() => { localStorage.setItem("dream:id", d.id); api(`/api/dreams/${d.id}`).then((x: V) => enter(x)); }} className="btn btn-ghost !px-4 !py-2 text-[13px]">Open</button>}
+                      {d.withdraw && d.tab && d.tab.left > 0 && <button disabled={wd === d.id} onClick={() => void withdrawPast(d)} className="btn btn-solid !px-4 !py-2 text-[13px]">{wd === d.id ? "Withdrawing…" : `Withdraw ${usd(d.tab.left / 1e6)}`}</button>}
+                      {d.tab && d.tab.left === 0 && d.tab.withdrawn > 0 && <span className="text-[12px] text-faint">{usd(d.tab.withdrawn / 1e6)} returned to you</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

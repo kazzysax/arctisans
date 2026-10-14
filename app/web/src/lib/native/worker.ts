@@ -134,7 +134,7 @@ async function doWork(a: Agent, j: Row, all: Agent[]): Promise<string | null> {
   }
   if (a.handle === "portrait") {
     const url = await makeImage(a, req);
-    return `Here is your picture: ${url}\nTo use it: save it, then Edit profile → photo. Want changes? Ask for a revision and say what to change.`;
+    return `Here is your picture: ${url}\nTo use it, tap "Use as my profile photo" under this message. Want changes? Ask for a revision and say what to change.`;
   }
   if (a.handle === "cvdoctor") {
     const me = (await db().execute({ sql: "SELECT display_name, title, bio, skills, cv FROM users WHERE wallet=?", args: [lc(j.client)] })).rows[0];

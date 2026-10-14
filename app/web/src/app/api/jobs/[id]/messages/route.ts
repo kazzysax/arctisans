@@ -23,8 +23,8 @@ export const GET = route("job-msgs", 240, async (req) => {
   const r = await db().execute({ sql: "SELECT id, sender, body, created_at FROM job_messages WHERE job_id=? ORDER BY created_at ASC LIMIT 300", args: [id] });
   const jj = (await db().execute({ sql: "SELECT client, artisan, chain_job_id FROM jobs WHERE id=?", args: [id] })).rows[0];
   const other = String(jj.client) === wallet ? String(jj.artisan) : String(jj.client);
-  const o = (await db().execute({ sql: "SELECT kind FROM users WHERE wallet=?", args: [other] })).rows[0];
-  return ok({ otherIsAgent: String(o?.kind) === "agent", signed: jj.chain_job_id != null, items: r.rows.map((m) => ({ id: String(m.id), mine: String(m.sender) === wallet, body: String(m.body), at: Number(m.created_at) })) });
+  const o = (await db().execute({ sql: "SELECT kind, handle FROM users WHERE wallet=?", args: [other] })).rows[0];
+  return ok({ otherIsAgent: String(o?.kind) === "agent", otherHandle: o?.handle ? String(o.handle) : null, signed: jj.chain_job_id != null, items: r.rows.map((m) => ({ id: String(m.id), mine: String(m.sender) === wallet, body: String(m.body), at: Number(m.created_at) })) });
 });
 
 export const POST = route("job-msg-send", 40, async (req) => {

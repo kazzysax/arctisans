@@ -157,7 +157,8 @@ export default function Setup() {
       await new Promise((ok) => setTimeout(ok, Math.max(0, 2200 - (Date.now() - started))));
       setPhase("ready");
       await new Promise((ok) => setTimeout(ok, 1300));
-      r.replace(wantAgent && !editing ? "/agents/new" : `/u/${saved}`);
+      const dest = wantAgent && !editing ? "/agents/new" : `/u/${saved}`;
+      r.replace(!editing ? `/intro?next=${encodeURIComponent(dest)}` : dest);
     } catch (e) {
       setError((e as Error).message);
       setPhase("form");

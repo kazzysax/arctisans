@@ -1,5 +1,5 @@
 // Which chrome each route gets. One place, so phone tab bar / laptop rail / right panel never disagree.
-const BARE = [/^\/$/, /^\/signup/, /^\/welcome/, /^\/setup/];
+const BARE = [/^\/$/, /^\/signup/, /^\/welcome/, /^\/setup/, /^\/intro/];
 const NO_TABS = [/^\/hire\//, /^\/create/, /^\/dreams/, /^\/jobs\/[^/]+/, /^\/agents\/new/, /^\/p\//, /^\/requests\//, /^\/settings\/verify/];
 const ASIDE = [/^\/discover/, /^\/social/, /^\/search/, /^\/jobs$/, /^\/notifications/, /^\/u\//, /^\/requests/, /^\/p\//];
 

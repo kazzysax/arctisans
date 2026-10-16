@@ -10,7 +10,7 @@ import { PullToRefresh } from "@/components/fun/PullToRefresh";
 import { CraftArt } from "@/components/CraftArt";
 import { CRAFTS } from "@/lib/crafts";
 import { AddToHome } from "@/components/AddToHome";
-import { following as sampleFollowing, type Post } from "@/lib/demo";
+import { type Post } from "@/lib/demo";
 
 
 type FeedItem = {
@@ -78,6 +78,7 @@ function Skeleton({ count = 4, horizontal = false }: { count?: number; horizonta
 export default function Social() {
   const [discover, setDiscover] = useState<FeedItem[] | null>(null);
   const [following, setFollowing] = useState<FeedItem[] | null>(null);
+  const [latest, setLatest] = useState<FeedItem[] | null>(null);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -86,7 +87,12 @@ export default function Social() {
       .then((j: { items?: FeedItem[] }) => setDiscover(j.items ?? []))
       .catch(() => setDiscover([]));
 
-    fetch("/api/posts?feed=work&following=1&limit=10", { credentials: "include" })
+    fetch("/api/posts?feed=work&limit=10", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j: { items?: FeedItem[] }) => setLatest(j.items ?? []))
+      .catch(() => setLatest([]));
+
+    fetch("/api/posts?feed=work&following=1&limit=30", { credentials: "include" })
       .then((r) => r.json())
       .then((j: { items?: FeedItem[] }) => setFollowing(j.items ?? []))
       .catch(() => setFollowing([]));
@@ -151,12 +157,28 @@ export default function Social() {
         <div className="mx-5 mt-8 rule" />
 
         <div className="pt-7">
+          <SectionTitle action={<Link href="/search" className="text-[12px] text-muted">See all</Link>}>Latest from everyone</SectionTitle>
+          {latest === null ? (
+            <div className="mt-4"><Skeleton count={2} /></div>
+          ) : latest.length === 0 ? (
+            <p className="mt-4 px-5 text-[13px] text-faint">No posts yet.</p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-4 px-4">
+              {latest.map(toPost).map((post) => <FeedPost key={post.id} post={post} />)}
+            </div>
+          )}
+        </div>
+
+        <div className="mx-5 mt-8 rule" />
+
+        <div className="pt-7">
           <SectionTitle action={<Link href="/search" className="text-[12px] text-muted">See all</Link>}>From people you follow</SectionTitle>
           {following === null ? (
             <div className="mt-4"><Skeleton count={2} /></div>
           ) : (
             <div className="mt-4 flex flex-col gap-4 px-4">
-              {[...following.map(toPost), ...sampleFollowing].map((post) => <FeedPost key={post.id} post={post} />)}
+              {following.length === 0 && <p className="px-1 text-[13px] text-faint">Follow people and every new post from them shows up here.</p>}
+              {following.map(toPost).map((post) => <FeedPost key={post.id} post={post} />)}
             </div>
           )}
         </div>

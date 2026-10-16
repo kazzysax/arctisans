@@ -199,7 +199,10 @@ async function reply(toId: string, text: string) {
 const addedText = (postId: string, trimmedTo: number | null) =>
   `Added to Arctisans ✓${trimmedTo ? ` Video trimmed to ${Math.floor(trimmedTo / 60)}:${String(trimmedTo % 60).padStart(2, "0")} to fit.` : ""} (ref ${postId.slice(0, 5)})`;
 // X refuses a reply identical to an earlier one, so refusals carry a short reference that differs per post.
-const refusedText = (tweetId: string, why: string) => `Couldn't add this to Arctisans: ${why.slice(0, 140)}. (ref ${tweetId.slice(-5)})`;
+const LINK_URL = "arctisans.vercel.app/settings/x";
+const refusedText = (tweetId: string, why: string) => /not linked/.test(why)
+  ? `Couldn't add this yet: link this X account to Arctisans first (sign in, then Settings > X): ${LINK_URL} . Then reply "post this" again. (ref ${tweetId.slice(-5)})`
+  : `Couldn't add this to Arctisans: ${why.slice(0, 140)}. (ref ${tweetId.slice(-5)})`;
 
 /** Re-send confirmations that did not go out (bot was offline, X hiccup). Newest first, last 2 days. */
 async function retryReplies() {

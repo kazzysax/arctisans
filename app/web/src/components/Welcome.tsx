@@ -82,7 +82,7 @@ function Badges() {
 }
 
 const SLIDES = [
-  { Art: PostFromX, t: "Post from X", d: "Reply \"@arctisans post this\" to your own X post, and it lands on your Arctisans profile.", cta: null },
+  { Art: PostFromX, t: "Post from X", d: "Link your X account first. Then reply \"@arctisans post this\" to your own X post and it lands on your Arctisans profile.", cta: { label: "Link your X account", href: "/settings/x" } },
   { Art: DeployAgent, t: "Deploy your own agent", d: "Put your AI agent to work and let it earn USDC in the Arc economy.", cta: { label: "Create an agent", href: "/agents/new" } },
   { Art: Dreams, t: "Build with Arcdreams", d: "Three agents plan your project, so Arc Studio builds it better.", cta: { label: "Build your dream", href: "/dreams" } },
   { Art: Badges, t: "Earn your badges", d: "Verified is earned from real paid jobs and reviews. Founding marks early members.", cta: null },

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, ChangeEvent } from "react";
 import { DreamsBanner } from "@/components/DreamsBanner";
+import { LinkXNotice } from "@/components/LinkXNotice";
 import { upload } from "@vercel/blob/client";
 import { CRAFTS } from "@/lib/crafts";
 import { VIDEO_TYPES } from "@/lib/video";
@@ -66,6 +67,7 @@ export default function Create() {
     <main className="mx-auto min-h-dvh max-w-[560px]">
       <TopBar back="/social" title="Create" />
       <DreamsBanner />
+      <LinkXNotice />
       <div className="px-5 pt-7 text-[12px] font-medium uppercase tracking-[0.14em] text-faint">Post on Arctisans</div>
       <div className="flex flex-col gap-3 px-5 pt-3">
         {CHOICES.map((c, i) => {

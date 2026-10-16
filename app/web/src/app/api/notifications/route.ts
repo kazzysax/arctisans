@@ -2,8 +2,10 @@ import { z } from "zod";
 import { db } from "@/db";
 import { ok, route } from "@/lib/api";
 import { requireSession } from "@/lib/session";
+import { pollSoon } from "@/lib/xlink";
 export const GET = route("notif", 120, async (req) => {
   const { wallet } = requireSession(req);
+  pollSoon(20_000); // someone just opened the app: pick up any "@arctisans post this" waiting on X
   const r = await db().execute({ sql: "SELECT id, kind, data, read, created_at FROM notifications WHERE wallet=? ORDER BY created_at DESC LIMIT 50", args: [wallet] });
   return ok({ unread: r.rows.filter((x) => !Number(x.read)).length, items: r.rows.map((x) => ({ id: String(x.id), kind: String(x.kind), data: JSON.parse(String(x.data)), read: !!Number(x.read), createdAt: Number(x.created_at) })) });
 });

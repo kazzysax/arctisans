@@ -345,7 +345,7 @@ export async function maybePoll(minGapMs = 45_000) {
   if (!xConfigured() || !process.env.X_BEARER_TOKEN || !process.env.X_POLL_SECRET) return null;
   await xMigrate();
   if (!(await claim("x_last_poll", minGapMs))) return null;
-  await fetch(`${APP()}/api/x/poll`, { headers: { authorization: `Bearer ${process.env.X_POLL_SECRET}` }, signal: AbortSignal.timeout(4000) }).catch(() => {});
+  await fetch(`${APP()}/api/x/poll`, { headers: { authorization: `Bearer ${process.env.X_POLL_SECRET}` }, signal: AbortSignal.timeout(50_000) }).catch(() => {});
   return true;
 }
 

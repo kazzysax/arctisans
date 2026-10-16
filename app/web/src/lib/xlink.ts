@@ -10,6 +10,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { keccak256, toBytes } from "viem";
 import { put } from "@vercel/blob";
 import { db, migrate } from "@/db";
+import { maybeReward, rewardCatchUp } from "@/lib/rewards";
 import { env } from "./env";
 import { processImage, storeImage } from "./images";
 import { fitVideo } from "./xvideo";
@@ -274,6 +275,7 @@ async function processMention(m: XTweet, media: Map<string, XMedia>, handle: str
     await db().execute({ sql: "INSERT INTO posts(id,author_wallet,feed,body,images,video,skill,city,hash,budget,created_at,source_url) VALUES(?,?,'work',?,?,?,NULL,NULL,?,NULL,?,?)",
       args: [id, wallet, body, JSON.stringify(images), video, hash, Date.now(), `https://x.com/i/status/${src.id}`] });
     await record("imported", trimmedTo ? `trimmed:${trimmedTo}` : "ok", id, 0);
+    if (wallet) await maybeReward(wallet, id).catch(() => {}); // launch gift: a migrated post counts as a first post
     if (src.id !== m.id) await db().execute({ sql: "INSERT OR IGNORE INTO x_imports(tweet_id,wallet,post_id,status,reason,created_at,replied,attempts) VALUES(?,?,?,'imported','source of a command reply',?,1,0)", args: [src.id, wallet, id, Date.now()] });
     await db().execute({ sql: "INSERT INTO notifications(id,wallet,kind,data,created_at) VALUES(?,?,?,?,?)", args: [crypto.randomUUID(), wallet, "x_import", JSON.stringify({ postId: id }), Date.now()] });
     if (await reply(m.id, addedText(id, trimmedTo))) await db().execute({ sql: "UPDATE x_imports SET replied=1 WHERE tweet_id=?", args: [m.id] });
@@ -332,6 +334,7 @@ export async function pollMentions() {
       } catch (e) { out.push({ tweet: id, result: `retry error: ${(e as Error).message}` }); }
     }
     await retryReplies().catch(() => {});
+    await rewardCatchUp().catch(() => {});
     await setState("x_poll_last", stamp(`ok, ${found.length} new${out.length ? `: ${out.map((o) => o.result.split(" as ")[0].split(":")[0]).join(", ")}` : ""}`));
     return { checked: found.length, out };
   } catch (e) {

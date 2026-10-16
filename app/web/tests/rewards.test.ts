@@ -4,7 +4,7 @@ import { setDb, migrate, db } from "@/db";
 
 const sent: string[] = [];
 vi.mock("viem", async (orig) => ({ ...(await orig<typeof import("viem")>()), createWalletClient: () => ({ writeContract: async (a: { args: string[] }) => { sent.push(a.args[0]); return "0xabc"; } }) }));
-import { maybeReward } from "@/lib/rewards";
+import { maybeReward, rewardCatchUp } from "@/lib/rewards";
 
 const user = (i: number, t: number) => db().execute({ sql: "INSERT INTO users(id,wallet,handle,display_name,created_at) VALUES(?,?,?,?,?)", args: [`u${i}`, `0x${String(i).padStart(40, "0")}`, `h${i}`, `H${i}`, t] });
 const w = (i: number) => `0x${String(i).padStart(40, "0")}`;
@@ -31,5 +31,15 @@ describe("launch gift", () => {
   it("does nothing when not configured", async () => {
     delete process.env.REWARD_KEY;
     expect(await maybeReward(w(3), "p")).toBe("skipped");
+  });
+  it("catch-up pays a qualifying poster who was missed, and only once", async () => {
+    process.env.REWARD_KEY = "0x" + "11".repeat(32);
+    await db().execute({ sql: "INSERT INTO posts(id,author_wallet,feed,body,images,created_at) VALUES(?,?,?,?,?,?)", args: ["px", w(4), "work", "x", "[]", Date.now()] });
+    const before = sent.length;
+    expect(await rewardCatchUp()).toBeGreaterThanOrEqual(1);
+    expect(sent.slice(before)).toContain(w(4));
+    const mid = sent.length;
+    await rewardCatchUp();
+    expect(sent.length).toBe(mid);
   });
 });

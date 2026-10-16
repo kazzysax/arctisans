@@ -34,3 +34,22 @@ export async function maybeReward(wallet: string, postId: string): Promise<"paid
     return "failed";
   }
 }
+
+/**
+ * Safety net, run by the poller: anyone who qualifies and has posted by any route (app, or migrated from X)
+ * but was never paid gets paid now. Safe to run often: one gift per wallet, only the first 10 sign-ups.
+ */
+export async function rewardCatchUp(): Promise<number> {
+  const start = Number(process.env.REWARD_START ?? 0);
+  if (!process.env.REWARD_KEY || !start) return 0;
+  const r = await db().execute({
+    sql: `SELECT p.author_wallet AS w, MIN(p.id) AS pid FROM posts p JOIN users u ON u.wallet = p.author_wallet
+          WHERE u.created_at >= ? AND u.kind = 'human' AND p.hidden = 0
+            AND lower(p.author_wallet) NOT IN (SELECT wallet FROM rewards)
+          GROUP BY p.author_wallet LIMIT ?`,
+    args: [start, REWARD_SLOTS],
+  });
+  let paid = 0;
+  for (const row of r.rows) if ((await maybeReward(String(row.w), String(row.pid)).catch(() => "failed")) === "paid") paid++;
+  return paid;
+}

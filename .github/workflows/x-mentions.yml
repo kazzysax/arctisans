@@ -1,8 +1,6 @@
 name: X mentions
-# Checks @arctisans mentions every 5 minutes and imports qualifying posts ("@arctisans post this").
+# Manual run only. The real schedule is Upstash QStash (poll every 2 min, index every 10 min); GitHub cron was throttled to a few runs a day.
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       selftest:
